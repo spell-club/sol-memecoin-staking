@@ -1,13 +1,7 @@
 [workspace]
 members = [
   "utils",
-  "depositor",
-  "liquidity_oracle",
-  "general_pool",
-  "income_pools",
-  "registry",
   "tests",
-  "toolkit",
   "rewards"
 ]
 

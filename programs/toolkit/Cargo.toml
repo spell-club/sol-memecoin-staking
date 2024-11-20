@@ -6,7 +6,7 @@ authors = ["everlend"]
 
 [dependencies]
 anyhow = "1.0.42"
-anchor-lang = "0.24.2"
+anchor-lang = "0.26.0"
 bs58 = "0.2.5"
 clap = "2.33.3"
 url = "2.2.2"
@@ -20,31 +20,18 @@ serde_derive = "1.0.103"
 serde_yaml = "0.8.21"
 serde_with = "1.12.0"
 serde_json = "1.0.81"
-solana-clap-utils = "1.9.13"
-solana-cli-config = "1.9.13"
-solana-account-decoder = "1.9.13"
-solana-client = "1.9.13"
-solana-sdk = "1.9.13"
-solana-logger = "1.9.13"
-solana-program = "1.9.13"
-solana-program-test = "1.9.13"
+solana-clap-utils = "1.18"
+solana-cli-config = "1.18"
+solana-account-decoder = "1.18"
+solana-client = "1.18"
+solana-sdk = "1.18"
+solana-logger = "1.18"
+solana-program = "1.18"
+solana-program-test = "1.18"
 tokio = "1.9.0"
 sha2 = "0.10.6"
 spl-associated-token-account = { version = "1.0.3", features = [ "no-entrypoint" ] }
-spl-token = { version = "3.1", features = [ "no-entrypoint" ] }
+spl-token = { version = "4", features = [ "no-entrypoint" ] }
 spl-token-lending = { git = "https://github.com/everlend/solana-program-library", features = [ "no-entrypoint" ] }
-larix-lending = { git = "https://github.com/everlend/larix-lending", features = [ "no-entrypoint" ] }
-port-finance-staking = { git = "https://github.com/port-finance/variable-rate-lending", features = ["no-entrypoint"] }
-quarry-mine = { version = "5.0.2", features = ["no-entrypoint"] }
-everlend-registry = { path = "../registry", features = [ "no-entrypoint" ] }
-everlend-general-pool = { path = "../general_pool", features = [ "no-entrypoint" ] }
-everlend-collateral-pool = { path = "../collateral_pool", features = [ "no-entrypoint" ] }
-everlend-income-pools = { path = "../income_pools", features = [ "no-entrypoint" ] }
-everlend-depositor = { path = "../depositor", features = [ "no-entrypoint" ] }
-everlend-liquidity-oracle = { path = "../liquidity_oracle", features = [ "no-entrypoint" ] }
 everlend-rewards = { path = "../rewards", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
-port-variable-rate-lending-instructions = "0.2.9"
-serum-multisig = { git = "https://github.com/everlend/multisig", features = [ "no-entrypoint" ] }
-solend-program = { git = "https://github.com/everlend/solend-program", features = [ "no-entrypoint" ], branch = "mainnet" }
-mpl-token-metadata = { version = "1.3.3", features = [ "no-entrypoint" ] }

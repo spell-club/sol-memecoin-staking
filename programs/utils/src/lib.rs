@@ -3,7 +3,6 @@
 mod asserts;
 pub mod cpi;
 mod error;
-pub mod integrations;
 pub mod math;
 pub mod pda;
 
