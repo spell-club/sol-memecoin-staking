@@ -10,10 +10,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 
-pub mod rewards;
 pub mod users;
-
-pub use rewards::*;
 pub use users::*;
 
 pub const EXP: u64 = 1_000_000_000;
@@ -23,6 +20,7 @@ pub type BanksClientResult<T> = Result<T, BanksClientError>;
 
 pub struct TestEnvironment {
     pub context: ProgramTestContext,
+    pub liquidity: Keypair,
 }
 
 pub fn program_test() -> ProgramTest {
@@ -78,20 +76,7 @@ pub fn get_liquidity_mint() -> (Keypair, Pubkey) {
     (keypair, pubkey)
 }
 
-pub async fn presetup() -> TestEnvironment {
-    let test = program_test();
-
-    let mut context = test.start_with_context().await;
-    let payer_pubkey = context.payer.pubkey();
-
-    create_mint(&mut context, &get_liquidity_mint().0, &payer_pubkey)
-        .await
-        .unwrap();
-
-    TestEnvironment { context }
-}
-
-pub async fn transfer(
+pub async fn transfer_sol(
     context: &mut ProgramTestContext,
     pubkey: &Pubkey,
     amount: u64,
@@ -172,7 +157,6 @@ pub async fn create_token_account(
 pub async fn create_mint(
     context: &mut ProgramTestContext,
     mint: &Keypair,
-    manager: &Pubkey,
 ) -> BanksClientResult<()> {
     let rent = context.banks_client.get_rent().await.unwrap();
 
@@ -188,7 +172,7 @@ pub async fn create_mint(
             spl_token::instruction::initialize_mint(
                 &spl_token::id(),
                 &mint.pubkey(),
-                manager,
+                &context.payer.pubkey(),
                 None,
                 0,
             )

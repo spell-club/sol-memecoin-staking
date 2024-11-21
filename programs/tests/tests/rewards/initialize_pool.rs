@@ -2,38 +2,39 @@ use crate::utils::*;
 use everlend_rewards::state::RewardPool;
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
-use solana_sdk::signer::Signer;
+use solana_sdk::{signature::Keypair, signer::Signer};
+use spl_token::state::Account;
 use std::borrow::Borrow;
 
-async fn setup() -> (ProgramTestContext, TestRewards) {
-    let env = presetup().await;
-    let test_reward_pool = TestRewards::new(None);
-
-    (env.context, test_reward_pool)
-}
+use super::TestRewards;
 
 #[tokio::test]
 async fn success() {
-    let (mut context, test_reward_pool) = setup().await;
+    let mut context = program_test().start_with_context().await;
 
-    test_reward_pool
-        .initialize_pool(&mut context)
+    let test_reward_pool = TestRewards::new(&mut context).await;
+
+    let pool_mint = Keypair::new();
+
+    let (reward_pool, reward_pool_spl) = test_reward_pool
+        .create_mint_and_initialize_pool(&mut context, &pool_mint)
         .await
         .unwrap();
 
-    let reward_pool_account = get_account(&mut context, &test_reward_pool.mining_reward_pool).await;
-    let reward_pool = RewardPool::unpack(reward_pool_account.data.borrow()).unwrap();
+    let reward_pool_account =
+        RewardPool::unpack(get_account(&mut context, &reward_pool).await.data.borrow()).unwrap();
 
     assert_eq!(
-        reward_pool.rewards_root,
+        reward_pool_account.rewards_root,
         test_reward_pool.rewards_root.pubkey()
     );
-    assert_eq!(
-        reward_pool.deposit_authority,
-        test_reward_pool.deposit_authority.pubkey()
-    );
-    assert_eq!(
-        reward_pool.liquidity_mint,
-        test_reward_pool.token_mint_pubkey
-    );
+
+    assert_eq!(reward_pool_account.liquidity_mint, pool_mint.pubkey());
+
+    let reward_pool_spl_account = get_account(&mut context, &reward_pool_spl).await;
+    let reward_pool_spl = Account::unpack(reward_pool_spl_account.data.borrow()).unwrap();
+
+    assert_eq!(reward_pool_account.liquidity_mint, reward_pool_spl.mint);
+    assert_eq!(reward_pool, reward_pool_spl.owner);
+    assert_eq!(0, reward_pool_spl.amount);
 }
