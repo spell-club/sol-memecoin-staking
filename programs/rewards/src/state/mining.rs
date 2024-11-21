@@ -11,8 +11,6 @@ use std::slice::Iter;
 /// Mining
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
 pub struct Mining {
-    /// Anchor id(For Anchor legacy contract compatibility)
-    pub anchor_id: [u8; 8],
     /// Reward pool address
     pub reward_pool: Pubkey,
     /// Saved bump for mining account
@@ -29,7 +27,6 @@ impl Mining {
     /// Initialize a Reward Pool
     pub fn initialize(reward_pool: Pubkey, bump: u8, owner: Pubkey) -> Mining {
         Mining {
-            anchor_id: Default::default(),
             reward_pool,
             bump,
             share: 0,
@@ -96,7 +93,7 @@ impl Mining {
 
 impl Sealed for Mining {}
 impl Pack for Mining {
-    const LEN: usize = 8 + (32 + 1 + 8 + 32 + (4 + RewardIndex::LEN * MAX_REWARDS));
+    const LEN: usize = 32 + 1 + 8 + 32 + (4 + RewardIndex::LEN * MAX_REWARDS);
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

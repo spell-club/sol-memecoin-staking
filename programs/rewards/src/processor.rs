@@ -29,17 +29,13 @@ pub fn process_instruction(
             msg!("RewardsInstruction: FillVault");
             FillVaultContext::new(program_id, accounts)?.process(program_id, amount)
         }
-        RewardsInstruction::InitializeMining => {
-            msg!("RewardsInstruction: InitializeMining");
-            InitializeMiningContext::new(program_id, accounts)?.process(program_id)
-        }
         RewardsInstruction::DepositMining { amount } => {
             msg!("RewardsInstruction: DepositMining");
             DepositMiningContext::new(program_id, accounts)?.process(program_id, amount)
         }
-        RewardsInstruction::WithdrawMining { amount } => {
+        RewardsInstruction::WithdrawMining => {
             msg!("RewardsInstruction: WithdrawMining");
-            WithdrawMiningContext::new(program_id, accounts)?.process(program_id, amount)
+            WithdrawMiningContext::new(program_id, accounts)?.process(program_id)
         }
         RewardsInstruction::Claim => {
             msg!("RewardsInstruction: Claim");

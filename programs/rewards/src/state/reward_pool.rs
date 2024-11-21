@@ -1,4 +1,4 @@
-use crate::state::{AccountType, DeprecatedRewardPool, Mining};
+use crate::state::{AccountType, Mining};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_utils::EverlendError;
 use solana_program::entrypoint::ProgramResult;
@@ -27,9 +27,6 @@ pub struct RewardPool {
     pub total_share: u64,
     /// A set of all possible rewards that we can get for this pool
     pub vaults: Vec<RewardVault>,
-    /// The address responsible for the charge of rewards for users.
-    /// It executes deposits on the rewards pools.
-    pub deposit_authority: Pubkey,
 }
 
 impl RewardPool {
@@ -42,7 +39,6 @@ impl RewardPool {
             liquidity_mint: params.liquidity_mint,
             total_share: 0,
             vaults: vec![],
-            deposit_authority: params.deposit_authority,
         }
     }
 
@@ -63,26 +59,26 @@ impl RewardPool {
 
     /// Process fill
     pub fn fill(&mut self, reward_mint: Pubkey, rewards: u64) -> ProgramResult {
-        if self.total_share == 0 {
-            return Err(EverlendError::RewardsNoDeposits.into());
-        }
+        // if self.total_share == 0 {
+        //     return Err(EverlendError::RewardsNoDeposits.into());
+        // }
 
-        let vault = self
-            .vaults
-            .iter_mut()
-            .find(|v| v.reward_mint == reward_mint)
-            .ok_or(EverlendError::RewardsInvalidVault)?;
+        // let vault = self
+        //     .vaults
+        //     .iter_mut()
+        //     .find(|v| v.reward_mint == reward_mint)
+        //     .ok_or(EverlendError::RewardsInvalidVault)?;
 
-        let index = PRECISION
-            .checked_mul(rewards as u128)
-            .ok_or(EverlendError::MathOverflow)?
-            .checked_div(self.total_share as u128)
-            .ok_or(EverlendError::MathOverflow)?;
+        // let index = PRECISION
+        //     .checked_mul(rewards as u128)
+        //     .ok_or(EverlendError::MathOverflow)?
+        //     .checked_div(self.total_share as u128)
+        //     .ok_or(EverlendError::MathOverflow)?;
 
-        vault.index_with_precision = vault
-            .index_with_precision
-            .checked_add(index)
-            .ok_or(EverlendError::MathOverflow)?;
+        // vault.index_with_precision = vault
+        //     .index_with_precision
+        //     .checked_add(index)
+        //     .ok_or(EverlendError::MathOverflow)?;
 
         Ok(())
     }
@@ -95,6 +91,7 @@ impl RewardPool {
             .total_share
             .checked_add(amount)
             .ok_or(EverlendError::MathOverflow)?;
+
         mining.share = mining
             .share
             .checked_add(amount)
@@ -104,15 +101,9 @@ impl RewardPool {
     }
 
     /// Process withdraw
-    pub fn withdraw(&mut self, mining: &mut Mining, amount: u64) -> ProgramResult {
-        mining.refresh_rewards(self.vaults.iter())?;
-
+    pub fn withdraw(&mut self, amount: u64) -> ProgramResult {
         self.total_share = self
             .total_share
-            .checked_sub(amount)
-            .ok_or(EverlendError::MathOverflow)?;
-        mining.share = mining
-            .share
             .checked_sub(amount)
             .ok_or(EverlendError::MathOverflow)?;
 
@@ -120,7 +111,7 @@ impl RewardPool {
     }
 
     /// Process migrate
-    pub fn migrate(deprecated_pool: &DeprecatedRewardPool) -> RewardPool {
+    pub fn migrate(deprecated_pool: &RewardPool) -> RewardPool {
         Self {
             account_type: AccountType::RewardPool,
             rewards_root: deprecated_pool.rewards_root,
@@ -128,7 +119,6 @@ impl RewardPool {
             liquidity_mint: deprecated_pool.liquidity_mint,
             total_share: deprecated_pool.total_share,
             vaults: deprecated_pool.vaults.clone(),
-            deposit_authority: deprecated_pool.deposit_authority,
         }
     }
 }
@@ -141,14 +131,11 @@ pub struct InitRewardPoolParams {
     pub bump: u8,
     /// Liquidity mint
     pub liquidity_mint: Pubkey,
-    /// The address responsible for the charge of rewards for users.
-    /// It executes deposits on the rewards pools.
-    pub deposit_authority: Pubkey,
 }
 
 impl Sealed for RewardPool {}
 impl Pack for RewardPool {
-    const LEN: usize = 1 + (32 + 1 + 32 + 8 + (4 + RewardVault::LEN * MAX_REWARDS) + 32);
+    const LEN: usize = 1 + (32 + 1 + 32 + 8 + (4 + RewardVault::LEN * MAX_REWARDS));
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -180,11 +167,9 @@ pub struct RewardVault {
     pub reward_mint: Pubkey,
     /// Index with precision
     pub index_with_precision: u128,
-    /// Fee account address
-    pub fee_account: Pubkey,
 }
 
 impl RewardVault {
     /// LEN
-    pub const LEN: usize = 1 + 32 + 16 + 32;
+    pub const LEN: usize = 1 + 32 + 16;
 }

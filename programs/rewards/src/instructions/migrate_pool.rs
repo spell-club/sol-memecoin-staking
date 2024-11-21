@@ -1,15 +1,11 @@
-use crate::find_reward_pool_program_address;
-use crate::state::{DeprecatedRewardPool, RewardPool, RewardsRoot};
-use everlend_utils::cpi::system::realloc_with_rent;
-use everlend_utils::{assert_account_key, AccountLoader};
+use everlend_utils::AccountLoader;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
 use solana_program::program_error::ProgramError;
-use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
-use solana_program::sysvar::{Sysvar, SysvarId};
+use solana_program::sysvar::SysvarId;
 
 /// Instruction context
 pub struct MigratePoolContext<'a, 'b> {
@@ -46,29 +42,37 @@ impl<'a, 'b> MigratePoolContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
-        let rent = Rent::from_account_info(self.rent)?;
+    pub fn process(&self, _program_id: &Pubkey) -> ProgramResult {
+        return Ok(());
 
-        let deprecated_pool = DeprecatedRewardPool::unpack(&self.reward_pool.data.borrow())?;
-        let reward_pool = RewardPool::migrate(&deprecated_pool);
+        let _rewards_root = self.rewards_root;
+        let _reward_pool = self.reward_pool;
+        let _liquidity_mint = self.liquidity_mint;
+        let _payer = self.payer;
+        let _rent = self.rent;
 
-        let (reward_pool_pubkey, _) = find_reward_pool_program_address(
-            program_id,
-            self.rewards_root.key,
-            self.liquidity_mint.key,
-        );
-        {
-            let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
-            assert_account_key(self.payer, &rewards_root.authority)?;
-            assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
-            assert_account_key(self.rewards_root, &deprecated_pool.rewards_root)?;
-            assert_account_key(self.liquidity_mint, &deprecated_pool.liquidity_mint)?;
-        }
+        // let rent = Rent::from_account_info(self.rent)?;
 
-        realloc_with_rent(self.reward_pool, self.payer, &rent, RewardPool::LEN)?;
+        // let deprecated_pool = DeprecatedRewardPool::unpack(&self.reward_pool.data.borrow())?;
+        // let reward_pool = RewardPool::migrate(&deprecated_pool);
 
-        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
+        // let (reward_pool_pubkey, _) = find_reward_pool_program_address(
+        //     program_id,
+        //     self.rewards_root.key,
+        //     self.liquidity_mint.key,
+        // );
+        // {
+        //     let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
+        //     assert_account_key(self.payer, &rewards_root.authority)?;
+        //     assert_account_key(self.reward_pool, &reward_pool_pubkey)?;
+        //     assert_account_key(self.rewards_root, &deprecated_pool.rewards_root)?;
+        //     assert_account_key(self.liquidity_mint, &deprecated_pool.liquidity_mint)?;
+        // }
 
-        Ok(())
+        // realloc_with_rent(self.reward_pool, self.payer, &rent, RewardPool::LEN)?;
+
+        // RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
+
+        // Ok(())
     }
 }

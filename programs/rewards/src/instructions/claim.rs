@@ -5,6 +5,10 @@ use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+use solana_program::system_program;
+use solana_program::sysvar::{Sysvar, SysvarId};
+use spl_token::state::Account;
 
 /// Instruction context
 pub struct ClaimContext<'a, 'b> {
@@ -14,6 +18,7 @@ pub struct ClaimContext<'a, 'b> {
     mining: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
     user_reward_token_account: &'a AccountInfo<'b>,
+    rent: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> ClaimContext<'a, 'b> {
@@ -29,9 +34,11 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_signer(account_info_iter)?;
-        let user_reward_token_account =
-            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let user_reward_token_account = AccountLoader::next_unchecked(account_info_iter)?; // unchecked so we can create on the fly
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
+        let _system_program =
+            AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(ClaimContext {
             reward_pool,
@@ -40,6 +47,7 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
             mining,
             user,
             user_reward_token_account,
+            rent,
         })
     }
 
@@ -83,10 +91,28 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
 
         mining.refresh_rewards(reward_pool.vaults.iter())?;
 
-        let mut reward_index = mining.reward_index_mut(*self.reward_mint.key);
+        let reward_index = mining.reward_index_mut(*self.reward_mint.key);
         let amount = reward_index.rewards;
 
         reward_index.rewards = 0;
+
+        // create user token account if it does not exist
+        if self.user_reward_token_account.owner.eq(&Pubkey::default()) {
+            everlend_utils::cpi::system::create_account::<Account>(
+                &spl_token::id(),
+                self.user.clone(),
+                self.user_reward_token_account.clone(),
+                &[],
+                &Rent::from_account_info(self.rent)?,
+            )?;
+
+            everlend_utils::cpi::spl_token::initialize_account(
+                self.user_reward_token_account.clone(),
+                self.reward_mint.clone(),
+                self.user.clone(),
+                self.rent.clone(),
+            )?;
+        }
 
         everlend_utils::cpi::spl_token::transfer(
             self.vault.clone(),

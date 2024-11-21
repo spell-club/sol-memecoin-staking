@@ -5,7 +5,7 @@ use solana_program::{
     program_pack::Pack,
     pubkey::Pubkey,
     rent::Rent,
-    system_instruction,
+    system_instruction, system_program,
 };
 
 /// Create account
@@ -60,4 +60,18 @@ pub fn realloc_with_rent<'a, 'b>(
 
     // Realloc
     acc.realloc(new_len, false)
+}
+
+pub fn close_account<'a, 'b>(
+    source_account_info: &'a AccountInfo<'b>,
+    dest_account_info: &'a AccountInfo<'b>,
+) -> ProgramResult {
+    let dest_starting_lamports = dest_account_info.lamports();
+    **dest_account_info.lamports.borrow_mut() = dest_starting_lamports
+        .checked_add(source_account_info.lamports())
+        .unwrap();
+    **source_account_info.lamports.borrow_mut() = 0;
+
+    source_account_info.assign(&system_program::ID);
+    source_account_info.realloc(0, false).map_err(Into::into)
 }

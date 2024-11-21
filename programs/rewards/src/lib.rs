@@ -63,3 +63,19 @@ pub fn find_reward_pool_program_address(
         program_id,
     )
 }
+
+/// Generates reward pool address
+pub fn find_reward_pool_spl_program_address(
+    program_id: &Pubkey,
+    pool_account: &Pubkey,
+    liquidity_mint: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            "spl".as_bytes(),
+            &pool_account.to_bytes(),
+            &liquidity_mint.to_bytes(),
+        ],
+        program_id,
+    )
+}
