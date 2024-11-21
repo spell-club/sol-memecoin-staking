@@ -3,6 +3,7 @@
 use crate::instruction::RewardsInstruction;
 use crate::instructions::*;
 use borsh::BorshDeserialize;
+use everlend_utils::EverlendError;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
@@ -47,7 +48,8 @@ pub fn process_instruction(
         }
         RewardsInstruction::MigratePool => {
             msg!("RewardsInstruction: MigratePool");
-            MigratePoolContext::new(program_id, accounts)?.process(program_id)
+            Err(EverlendError::NotImplemented.into())
+            // MigratePoolContext::new(program_id, accounts)?.process(program_id)
         }
     }
 }

@@ -2,7 +2,6 @@
 
 //! Rewards contract
 
-pub mod cpi;
 pub mod instruction;
 pub mod instructions;
 pub mod processor;

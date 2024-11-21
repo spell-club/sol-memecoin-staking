@@ -95,8 +95,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
             )?;
         }
 
-        let (reward_pool_authority, bump_seed) =
-            find_program_address(program_id, self.reward_pool.key);
+        let (reward_pool_authority, _) = find_program_address(program_id, self.reward_pool.key);
         assert_account_key(self.reward_pool_authority, &reward_pool_authority)?;
 
         everlend_utils::cpi::spl_token::initialize_account(

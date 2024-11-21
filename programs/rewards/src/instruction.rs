@@ -103,7 +103,7 @@ pub fn fill_vault(
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
         AccountMeta::new(*from, false),
-        AccountMeta::new_readonly(*authority, true),
+        AccountMeta::new(*authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
 
@@ -115,6 +115,7 @@ pub fn fill_vault(
 }
 
 /// Creates 'DepositMining' instruction.
+#[allow(clippy::too_many_arguments)]
 pub fn deposit_mining(
     program_id: &Pubkey,
     reward_pool: &Pubkey,
@@ -145,6 +146,7 @@ pub fn deposit_mining(
 }
 
 /// Creates 'WithdrawMining' instruction.
+#[allow(clippy::too_many_arguments)]
 pub fn withdraw_mining(
     program_id: &Pubkey,
     reward_pool: &Pubkey,
