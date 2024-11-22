@@ -1,5 +1,6 @@
 use crate::utils::*;
 use everlend_rewards::state::RewardPool;
+use everlend_utils::find_program_address;
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
 use solana_sdk::{signature::Keypair, signer::Signer};
@@ -15,9 +16,10 @@ async fn success() {
     let test_reward_pool = TestRewards::new(&mut context).await;
 
     let pool_mint = Keypair::new();
+    let lock_time_sec = 60;
 
     let (reward_pool, reward_pool_spl) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &pool_mint)
+        .create_mint_and_initialize_pool(&mut context, &pool_mint, lock_time_sec)
         .await
         .unwrap();
 
@@ -30,11 +32,14 @@ async fn success() {
     );
 
     assert_eq!(reward_pool_account.liquidity_mint, pool_mint.pubkey());
+    assert_eq!(reward_pool_account.lock_time_sec, lock_time_sec);
 
     let reward_pool_spl_account = get_account(&mut context, &reward_pool_spl).await;
     let reward_pool_spl = Account::unpack(reward_pool_spl_account.data.borrow()).unwrap();
 
+    let (reward_pool_authority, _) = find_program_address(&everlend_rewards::id(), &reward_pool);
+
     assert_eq!(reward_pool_account.liquidity_mint, reward_pool_spl.mint);
-    assert_eq!(reward_pool, reward_pool_spl.owner);
+    assert_eq!(reward_pool_authority, reward_pool_spl.owner);
     assert_eq!(0, reward_pool_spl.amount);
 }

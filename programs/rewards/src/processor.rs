@@ -18,13 +18,26 @@ pub fn process_instruction(
     let instruction = RewardsInstruction::try_from_slice(input)?;
 
     match instruction {
-        RewardsInstruction::InitializePool => {
+        RewardsInstruction::InitializePool { lock_time_sec } => {
             msg!("RewardsInstruction: InitializePool");
-            InitializePoolContext::new(program_id, accounts)?.process(program_id)
+            InitializePoolContext::new(program_id, accounts)?.process(program_id, lock_time_sec)
         }
-        RewardsInstruction::AddVault => {
+        RewardsInstruction::AddVault {
+            ratio_base,
+            ratio_quote,
+            reward_period_sec,
+            distribution_starts_at,
+            reward_max_amount_per_period,
+        } => {
             msg!("RewardsInstruction: AddVault");
-            AddVaultContext::new(program_id, accounts)?.process(program_id)
+            AddVaultContext::new(program_id, accounts)?.process(
+                program_id,
+                ratio_base,
+                ratio_quote,
+                reward_period_sec,
+                distribution_starts_at,
+                reward_max_amount_per_period,
+            )
         }
         RewardsInstruction::FillVault { amount } => {
             msg!("RewardsInstruction: FillVault");

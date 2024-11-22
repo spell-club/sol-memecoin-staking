@@ -17,15 +17,25 @@ async fn success() {
     let pool_mint = Keypair::new();
 
     test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &pool_mint)
+        .create_mint_and_initialize_pool(&mut context, &pool_mint, 0)
         .await
         .unwrap();
 
     let reward_mint = Keypair::new();
     create_mint(&mut context, &reward_mint).await.unwrap();
 
+    let (clock, _) = get_clock(&mut context).await;
+
     let vault = test_reward_pool
-        .add_vault(&mut context, &pool_mint.pubkey(), &reward_mint.pubkey())
+        .add_vault(
+            &mut context,
+            &pool_mint.pubkey(),
+            &reward_mint.pubkey(),
+            1,
+            1,
+            60,
+            clock.unix_timestamp as u64,
+        )
         .await;
 
     let initial_balance = 1_000_000;

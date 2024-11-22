@@ -3,7 +3,9 @@
 use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
+use solana_sdk::clock::Clock;
 use solana_sdk::signature::read_keypair_file;
+use solana_sdk::sysvar::clock;
 use solana_sdk::{
     account::Account,
     signature::{Keypair, Signer},
@@ -46,6 +48,13 @@ pub async fn get_account(context: &mut ProgramTestContext, pubkey: &Pubkey) -> A
         .await
         .expect("account not found")
         .expect("account empty")
+}
+
+pub async fn get_clock(context: &mut ProgramTestContext) -> (Clock, Account) {
+    let clockid = clock::id();
+    let acc = get_account(context, &clockid).await;
+    let clock: Clock = bincode::deserialize(&acc.data).unwrap();
+    (clock, acc)
 }
 
 pub async fn get_mint_data(

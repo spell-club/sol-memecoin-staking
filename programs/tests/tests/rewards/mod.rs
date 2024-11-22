@@ -62,6 +62,7 @@ impl TestRewards {
         &self,
         context: &mut ProgramTestContext,
         liquidity_mint: &Keypair,
+        lock_time_sec: u64,
     ) -> BanksClientResult<(Pubkey, Pubkey)> {
         create_mint(context, liquidity_mint).await.unwrap();
 
@@ -84,6 +85,7 @@ impl TestRewards {
                     &reward_pool_authority,
                     &liquidity_mint.pubkey(),
                     &self.root_authority.pubkey(),
+                    lock_time_sec,
                 ),
             ],
             Some(&self.root_authority.pubkey()),
@@ -120,8 +122,8 @@ impl TestRewards {
                 &user.pubkey(),
                 amount,
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, user],
+            None,
+            &[user],
             context.last_blockhash,
         );
 
@@ -156,8 +158,8 @@ impl TestRewards {
                 user_token_account,
                 &user.pubkey(),
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, user],
+            None,
+            &[user],
             context.last_blockhash,
         );
 
@@ -169,6 +171,10 @@ impl TestRewards {
         context: &mut ProgramTestContext,
         liquidity_mint: &Pubkey,
         reward_mint: &Pubkey,
+        ratio_base: u64,
+        ratio_quote: u64,
+        reward_period_sec: u32,
+        distribution_starts_at: u64,
     ) -> Pubkey {
         let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
 
@@ -183,6 +189,11 @@ impl TestRewards {
                 reward_mint,
                 &vault_pubkey,
                 &self.root_authority.pubkey(),
+                ratio_base,
+                ratio_quote,
+                reward_period_sec,
+                distribution_starts_at,
+                0,
             )],
             Some(&self.root_authority.pubkey()),
             &[&self.root_authority],
@@ -216,8 +227,8 @@ impl TestRewards {
                 &from.owner.pubkey(),
                 amount,
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, &from.owner],
+            None,
+            &[&from.owner],
             context.last_blockhash,
         );
 
@@ -250,8 +261,8 @@ impl TestRewards {
                 &user.pubkey(),
                 &user_reward_token_account.pubkey(),
             )],
-            Some(&context.payer.pubkey()),
-            &[&context.payer, user, user_reward_token_account],
+            None,
+            &[user, user_reward_token_account],
             context.last_blockhash,
         );
 

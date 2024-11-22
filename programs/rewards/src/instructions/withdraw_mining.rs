@@ -1,12 +1,14 @@
 use crate::find_reward_pool_spl_program_address;
 use crate::state::{Mining, RewardPool};
-use everlend_utils::{assert_account_key, find_program_address, AccountLoader};
+use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::system_program;
+use solana_program::sysvar::{clock, Sysvar};
 
 /// Instruction context
 pub struct WithdrawMiningContext<'a, 'b> {
@@ -17,6 +19,7 @@ pub struct WithdrawMiningContext<'a, 'b> {
     mining: &'a AccountInfo<'b>,
     user_token_account: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
+    clock: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
@@ -38,6 +41,7 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
 
         Ok(WithdrawMiningContext {
             reward_pool,
@@ -47,6 +51,7 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
             mining,
             user_token_account,
             user,
+            clock,
         })
     }
 
@@ -94,11 +99,17 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
             self.reward_pool_spl.clone(),
             self.user_token_account.clone(),
             self.reward_pool_authority.clone(),
-            mining.share,
+            mining.amount,
             &[signers_seeds],
         )?;
 
-        reward_pool.withdraw(mining.share)?;
+        // check if it's allowd to withdraw
+        let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp as u64;
+        if timestamp.saturating_sub(mining.last_deposit_time) < reward_pool.lock_time_sec {
+            return Err(EverlendError::LockTimeStillActive.into());
+        }
+
+        reward_pool.withdraw(mining.amount)?;
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
 
         // close mining account

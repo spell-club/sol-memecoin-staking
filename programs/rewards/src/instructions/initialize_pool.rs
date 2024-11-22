@@ -53,14 +53,14 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
+    pub fn process(&self, program_id: &Pubkey, lock_time_sec: u64) -> ProgramResult {
         {
             let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
             assert_account_key(self.payer, &rewards_root.authority)?;
         }
 
         self.create_spl_acc(program_id)?;
-        self.create_rewards_pool_acc(program_id)?;
+        self.create_rewards_pool_acc(program_id, lock_time_sec)?;
 
         Ok(())
     }
@@ -109,7 +109,11 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
     }
 
     /// create pool account
-    pub fn create_rewards_pool_acc(&self, program_id: &Pubkey) -> ProgramResult {
+    pub fn create_rewards_pool_acc(
+        &self,
+        program_id: &Pubkey,
+        lock_time_sec: u64,
+    ) -> ProgramResult {
         let bump = {
             let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
                 program_id,
@@ -138,6 +142,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         let reward_pool = RewardPool::init(InitRewardPoolParams {
             rewards_root: *self.rewards_root.key,
             bump,
+            lock_time_sec,
             liquidity_mint: *self.liquidity_mint.key,
         });
 

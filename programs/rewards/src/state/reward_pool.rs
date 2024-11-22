@@ -23,8 +23,10 @@ pub struct RewardPool {
     pub bump: u8,
     /// Liquidity mint
     pub liquidity_mint: Pubkey,
-    /// Reward total share
-    pub total_share: u64,
+    /// Total staked amount
+    pub total_amount: u64,
+    /// staking lock time
+    pub lock_time_sec: u64,
     /// A set of all possible rewards that we can get for this pool
     pub vaults: Vec<RewardVault>,
 }
@@ -37,7 +39,8 @@ impl RewardPool {
             rewards_root: params.rewards_root,
             bump: params.bump,
             liquidity_mint: params.liquidity_mint,
-            total_share: 0,
+            total_amount: 0,
+            lock_time_sec: params.lock_time_sec,
             vaults: vec![],
         }
     }
@@ -57,53 +60,29 @@ impl RewardPool {
         Ok(())
     }
 
-    /// Process fill
-    pub fn fill(&mut self, reward_mint: Pubkey, rewards: u64) -> ProgramResult {
-        // if self.total_share == 0 {
-        //     return Err(EverlendError::RewardsNoDeposits.into());
-        // }
-
-        // let vault = self
-        //     .vaults
-        //     .iter_mut()
-        //     .find(|v| v.reward_mint == reward_mint)
-        //     .ok_or(EverlendError::RewardsInvalidVault)?;
-
-        // let index = PRECISION
-        //     .checked_mul(rewards as u128)
-        //     .ok_or(EverlendError::MathOverflow)?
-        //     .checked_div(self.total_share as u128)
-        //     .ok_or(EverlendError::MathOverflow)?;
-
-        // vault.index_with_precision = vault
-        //     .index_with_precision
-        //     .checked_add(index)
-        //     .ok_or(EverlendError::MathOverflow)?;
-
-        Ok(())
-    }
-
     /// Process deposit
-    pub fn deposit(&mut self, mining: &mut Mining, amount: u64) -> ProgramResult {
-        mining.refresh_rewards(self.vaults.iter())?;
+    pub fn deposit(&mut self, mining: &mut Mining, amount: u64, timestamp: u64) -> ProgramResult {
+        mining.refresh_rewards(self.vaults.iter(), timestamp)?;
 
-        self.total_share = self
-            .total_share
+        self.total_amount = self
+            .total_amount
             .checked_add(amount)
             .ok_or(EverlendError::MathOverflow)?;
 
-        mining.share = mining
-            .share
+        mining.amount = mining
+            .amount
             .checked_add(amount)
             .ok_or(EverlendError::MathOverflow)?;
+
+        mining.last_deposit_time = timestamp;
 
         Ok(())
     }
 
     /// Process withdraw
     pub fn withdraw(&mut self, amount: u64) -> ProgramResult {
-        self.total_share = self
-            .total_share
+        self.total_amount = self
+            .total_amount
             .checked_sub(amount)
             .ok_or(EverlendError::MathOverflow)?;
 
@@ -117,7 +96,8 @@ impl RewardPool {
             rewards_root: deprecated_pool.rewards_root,
             bump: deprecated_pool.bump,
             liquidity_mint: deprecated_pool.liquidity_mint,
-            total_share: deprecated_pool.total_share,
+            total_amount: deprecated_pool.total_amount,
+            lock_time_sec: deprecated_pool.lock_time_sec,
             vaults: deprecated_pool.vaults.clone(),
         }
     }
@@ -125,17 +105,19 @@ impl RewardPool {
 
 /// Initialize a Reward Pool params
 pub struct InitRewardPoolParams {
-    /// Rewards Root (ex-Config program account)
+    /// Rewards Root
     pub rewards_root: Pubkey,
     /// Saved bump for reward pool account
     pub bump: u8,
     /// Liquidity mint
     pub liquidity_mint: Pubkey,
+    /// staking lock time
+    pub lock_time_sec: u64,
 }
 
 impl Sealed for RewardPool {}
 impl Pack for RewardPool {
-    const LEN: usize = 1 + (32 + 1 + 32 + 8 + (4 + RewardVault::LEN * MAX_REWARDS));
+    const LEN: usize = 1 + (32 + 1 + 32 + 8 + 8 + (4 + RewardVault::LEN * MAX_REWARDS));
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -165,11 +147,19 @@ pub struct RewardVault {
     pub bump: u8,
     /// Reward mint address
     pub reward_mint: Pubkey,
-    /// Index with precision
-    pub index_with_precision: u128,
+    /// Reward ratio of deposit currency
+    pub ratio_base: u64,
+    /// Reward ratio of reward currency
+    pub ratio_quote: u64,
+    /// Time period for reward calculation
+    pub reward_period_sec: u32,
+    /// Timestamp since when distribution begins
+    pub distribution_starts_at: u64,
+    /// Maximum amount of reward per period (cap)
+    pub reward_max_amount_per_period: u64,
 }
 
 impl RewardVault {
     /// LEN
-    pub const LEN: usize = 1 + 32 + 16;
+    pub const LEN: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8;
 }

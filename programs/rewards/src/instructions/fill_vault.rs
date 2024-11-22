@@ -42,7 +42,7 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
-        let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
+        let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
 
         {
             let vault = reward_pool
@@ -64,8 +64,6 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
             )?
         }
 
-        reward_pool.fill(*self.reward_mint.key, amount)?;
-
         everlend_utils::cpi::spl_token::transfer(
             self.source_token_account.clone(),
             self.vault.clone(),
@@ -73,8 +71,6 @@ impl<'a, 'b> FillVaultContext<'a, 'b> {
             amount,
             &[],
         )?;
-
-        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
 
         Ok(())
     }

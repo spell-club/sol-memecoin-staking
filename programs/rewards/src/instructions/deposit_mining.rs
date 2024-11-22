@@ -2,13 +2,14 @@ use crate::state::{Mining, RewardPool};
 use crate::{find_mining_program_address, find_reward_pool_spl_program_address};
 use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
-use solana_program::sysvar::{Sysvar, SysvarId};
+use solana_program::sysvar::{clock, Sysvar, SysvarId};
 
 /// Instruction context
 pub struct DepositMiningContext<'a, 'b> {
@@ -18,6 +19,7 @@ pub struct DepositMiningContext<'a, 'b> {
     mining: &'a AccountInfo<'b>,
     user_token_account: &'a AccountInfo<'b>,
     user: &'a AccountInfo<'b>,
+    clock: &'a AccountInfo<'b>,
     rent: &'a AccountInfo<'b>,
 }
 
@@ -39,6 +41,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
+        let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
         let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(DepositMiningContext {
@@ -48,6 +51,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
             mining,
             user_token_account,
             user,
+            clock,
             rent,
         })
     }
@@ -90,6 +94,8 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
             assert_account_key(self.reward_pool_spl, &spl_pubkey)?;
         }
 
+        let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
+
         // Transfer token from source to token account
         everlend_utils::cpi::spl_token::transfer(
             self.user_token_account.clone(),
@@ -99,9 +105,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
             &[],
         )?;
 
-        // TODO: refresh user rewards
-        // TODO: store user deposit
-        reward_pool.deposit(&mut mining, amount)?;
+        reward_pool.deposit(&mut mining, amount, timestamp as u64)?;
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
         Mining::pack(mining, *self.mining.data.borrow_mut())?;

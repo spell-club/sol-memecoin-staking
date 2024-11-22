@@ -3,16 +3,31 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::instruction::{AccountMeta, Instruction};
 use solana_program::pubkey::Pubkey;
+use solana_program::sysvar::clock;
 use solana_program::{system_program, sysvar};
 
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq, Eq)]
 pub enum RewardsInstruction {
     /// Creates and initializes a reward pool account
-    InitializePool,
+    InitializePool {
+        /// staking lock time
+        lock_time_sec: u64,
+    },
 
     /// Creates a new vault account and adds it to the reward pool
-    AddVault,
+    AddVault {
+        /// Reward ratio of deposit currency
+        ratio_base: u64,
+        /// Reward ratio of reward currency
+        ratio_quote: u64,
+        /// Time period for reward calculation
+        reward_period_sec: u32,
+        /// Time when reward destribution begins
+        distribution_starts_at: u64,
+        /// Maximum amount of reward per period (cap)
+        reward_max_amount_per_period: u64,
+    },
 
     /// Fills the reward pool with rewards
     FillVault {
@@ -48,6 +63,7 @@ pub fn initialize_pool(
     reward_pool_authority: &Pubkey,
     liquidity_mint: &Pubkey,
     payer: &Pubkey,
+    lock_time_sec: u64,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*root_account, false),
@@ -61,10 +77,15 @@ pub fn initialize_pool(
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(*program_id, &RewardsInstruction::InitializePool, accounts)
+    Instruction::new_with_borsh(
+        *program_id,
+        &RewardsInstruction::InitializePool { lock_time_sec },
+        accounts,
+    )
 }
 
 /// Creates 'AddVault' instruction.
+#[allow(clippy::too_many_arguments)]
 pub fn add_vault(
     program_id: &Pubkey,
     rewards_root: &Pubkey,
@@ -72,6 +93,11 @@ pub fn add_vault(
     reward_mint: &Pubkey,
     vault: &Pubkey,
     payer: &Pubkey,
+    ratio_base: u64,
+    ratio_quote: u64,
+    reward_period_sec: u32,
+    distribution_starts_at: u64,
+    reward_max_amount_per_period: u64,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*rewards_root, false),
@@ -81,10 +107,21 @@ pub fn add_vault(
         AccountMeta::new(*payer, true),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(clock::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(*program_id, &RewardsInstruction::AddVault, accounts)
+    Instruction::new_with_borsh(
+        *program_id,
+        &RewardsInstruction::AddVault {
+            ratio_base,
+            ratio_quote,
+            reward_period_sec,
+            distribution_starts_at,
+            reward_max_amount_per_period,
+        },
+        accounts,
+    )
 }
 
 /// Creates 'FillVault' instruction.
@@ -135,6 +172,7 @@ pub fn deposit_mining(
         AccountMeta::new(*user, true),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(clock::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
@@ -167,6 +205,7 @@ pub fn withdraw_mining(
         AccountMeta::new(*user, true),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(clock::id(), false),
     ];
 
     Instruction::new_with_borsh(*program_id, &RewardsInstruction::WithdrawMining, accounts)
@@ -199,6 +238,7 @@ pub fn claim(
         AccountMeta::new(*user_reward_token, true),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(clock::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 

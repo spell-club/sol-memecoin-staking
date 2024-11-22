@@ -1,5 +1,4 @@
 use crate::utils::*;
-use anchor_lang::Key;
 use everlend_rewards::state::RewardPool;
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
@@ -17,20 +16,37 @@ async fn success() {
     let pool_mint = Keypair::new();
 
     let (reward_pool, _) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &pool_mint)
+        .create_mint_and_initialize_pool(&mut context, &pool_mint, 0)
         .await
         .unwrap();
 
     let reward_mint = Keypair::new();
     create_mint(&mut context, &reward_mint).await.unwrap();
 
+    let (clock, _) = get_clock(&mut context).await;
+
     test_reward_pool
-        .add_vault(&mut context, &pool_mint.pubkey(), &reward_mint.pubkey())
+        .add_vault(
+            &mut context,
+            &pool_mint.pubkey(),
+            &reward_mint.pubkey(),
+            125,
+            36,
+            60,
+            clock.unix_timestamp as u64 + 3600,
+        )
         .await;
 
     let reward_pool_account =
         RewardPool::unpack(get_account(&mut context, &reward_pool).await.data.borrow()).unwrap();
-    let vaults = reward_pool_account.vaults.get(0).unwrap();
+    let vault = reward_pool_account.vaults.get(0).unwrap();
 
-    assert_eq!(vaults.reward_mint, reward_mint.pubkey());
+    assert_eq!(vault.reward_mint, reward_mint.pubkey());
+    assert_eq!(vault.ratio_base, 125);
+    assert_eq!(vault.ratio_quote, 36);
+    assert_eq!(vault.reward_period_sec, 60);
+    assert_eq!(
+        vault.distribution_starts_at,
+        clock.unix_timestamp as u64 + 3600
+    );
 }
