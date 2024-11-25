@@ -1,5 +1,5 @@
 use crate::state::{Mining, RewardPool};
-use everlend_utils::{assert_account_key, AccountLoader};
+use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
@@ -61,6 +61,19 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         let mut mining = Mining::unpack(&self.mining.data.borrow())?;
 
+        {
+            let mining_pubkey = Pubkey::create_program_address(
+                &[
+                    b"mining".as_ref(),
+                    self.user.key.as_ref(),
+                    self.reward_pool.key.as_ref(),
+                    &[mining.bump],
+                ],
+                program_id,
+            )?;
+            assert_account_key(self.mining, &mining_pubkey)?;
+        }
+
         let reward_pool_seeds = &[
             b"reward_pool".as_ref(),
             &reward_pool.rewards_root.to_bytes()[..32],
@@ -89,6 +102,7 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
                 &self.reward_mint.key.to_bytes()[..32],
                 &[bump],
             ];
+
             assert_account_key(
                 self.vault,
                 &Pubkey::create_program_address(vault_seeds, program_id)?,
@@ -96,11 +110,20 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         }
 
         mining.refresh_rewards(reward_pool.vaults.iter(), timestamp as u64)?;
+        let reward_amount = mining.flush_rewards(*self.reward_mint.key);
 
-        let reward_index = mining.reward_index_mut(*self.reward_mint.key);
-        let amount = reward_index.rewards;
+        self.spl_transfer_reward(reward_amount, reward_pool_seeds)?;
 
-        reward_index.rewards = 0;
+        Mining::pack(mining, *self.mining.data.borrow_mut())?;
+
+        Ok(())
+    }
+
+    /// create reward token account for user and transfer reward
+    pub fn spl_transfer_reward(&self, amount: u64, seeds: &[&[u8]]) -> ProgramResult {
+        if amount == 0 {
+            return Ok(());
+        }
 
         // create user token account if it does not exist
         if self.user_reward_token_account.owner.eq(&Pubkey::default()) {
@@ -118,6 +141,8 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
                 self.user.clone(),
                 self.rent.clone(),
             )?;
+        } else if !self.user_reward_token_account.owner.eq(&spl_token::id()) {
+            return Err(EverlendError::InvalidAccountOwner.into());
         }
 
         everlend_utils::cpi::spl_token::transfer(
@@ -125,10 +150,8 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
             self.user_reward_token_account.clone(),
             self.reward_pool.clone(),
             amount,
-            &[reward_pool_seeds],
+            &[seeds],
         )?;
-
-        Mining::pack(mining, *self.mining.data.borrow_mut())?;
 
         Ok(())
     }

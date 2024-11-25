@@ -58,16 +58,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
-        let mut mining = if self.mining.owner.eq(&Pubkey::default()) {
-            // create account
-            let bump = self.create_mining_acc(program_id)?;
-            Mining::initialize(*self.reward_pool.key, bump, *self.user.key)
-        } else if self.mining.owner.eq(program_id) {
-            Mining::unpack(&self.mining.data.borrow())?
-        } else {
-            return Err(ProgramError::InvalidAccountOwner);
-        };
-
+        let mut mining = self.check_and_init_mining(program_id)?;
         {
             let mining_pubkey = Pubkey::create_program_address(
                 &[
@@ -113,8 +104,27 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
         Ok(())
     }
 
+    /// Process instruction
+    pub fn check_and_init_mining(&self, program_id: &Pubkey) -> Result<Mining, ProgramError> {
+        if self.mining.owner.eq(&Pubkey::default()) {
+            // create account
+            let bump = self.create_mining_acc(program_id)?;
+            return Ok(Mining::initialize(
+                *self.reward_pool.key,
+                bump,
+                *self.user.key,
+            ));
+        }
+
+        if self.mining.owner.eq(program_id) {
+            return Ok(Mining::unpack(&self.mining.data.borrow())?);
+        }
+
+        Err(ProgramError::InvalidAccountOwner)
+    }
+
     /// create a mining account for user
-    pub fn create_mining_acc(&self, program_id: &Pubkey) -> std::result::Result<u8, ProgramError> {
+    pub fn create_mining_acc(&self, program_id: &Pubkey) -> Result<u8, ProgramError> {
         let bump = {
             let (pubkey, bump) =
                 find_mining_program_address(program_id, self.user.key, self.reward_pool.key);

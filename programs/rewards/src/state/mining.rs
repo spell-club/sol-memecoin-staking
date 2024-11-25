@@ -66,10 +66,13 @@ impl Mining {
         }
     }
 
-    /// Claim reward
-    pub fn claim(&mut self, reward_mint: Pubkey) {
+    /// Flush rewards
+    pub fn flush_rewards(&mut self, reward_mint: Pubkey) -> u64 {
         let reward_index = self.reward_index_mut(reward_mint);
+        let amount = reward_index.rewards;
         reward_index.rewards = 0;
+
+        amount
     }
 
     /// Refresh rewards
@@ -82,7 +85,7 @@ impl Mining {
 
         // first deposit - nothing to calculate
         if rewards_calculated_at != 0 {
-            let share = self.amount;
+            let amount = self.amount;
 
             for vault in vaults {
                 let reward_index = self.reward_index_mut(vault.reward_mint);
@@ -98,7 +101,7 @@ impl Mining {
 
                 // calculate reward amount based on coefficient
                 let rewards = (num_periods as u128)
-                    .checked_mul(share.into())
+                    .checked_mul(amount.into())
                     .ok_or(EverlendError::MathOverflow)?
                     .checked_mul(vault.ratio_quote.into())
                     .ok_or(EverlendError::MathOverflow)?

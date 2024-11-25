@@ -67,11 +67,35 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
 
+        {
+            let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
+            assert_account_key(self.payer, &rewards_root.authority)?;
+        }
+
         let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
         if distribution_starts_at < timestamp as u64 {
             return Err(ProgramError::InvalidArgument);
         }
 
+        let bump = self.create_spl_acc(program_id)?;
+
+        reward_pool.add_vault(RewardVault {
+            bump,
+            ratio_base,
+            ratio_quote,
+            reward_period_sec,
+            reward_mint: *self.reward_mint.key,
+            distribution_starts_at,
+            reward_max_amount_per_period,
+        })?;
+
+        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
+
+        Ok(())
+    }
+
+    /// creates vault spl token account
+    pub fn create_spl_acc(&self, program_id: &Pubkey) -> Result<u8, ProgramError> {
         let bump = {
             let (vault_pubkey, bump) =
                 find_vault_program_address(program_id, self.reward_pool.key, self.reward_mint.key);
@@ -79,11 +103,6 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
 
             bump
         };
-
-        {
-            let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
-            assert_account_key(self.payer, &rewards_root.authority)?;
-        }
 
         let signers_seeds = &[
             b"vault".as_ref(),
@@ -107,18 +126,6 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             self.rent.clone(),
         )?;
 
-        reward_pool.add_vault(RewardVault {
-            bump,
-            ratio_base,
-            ratio_quote,
-            reward_period_sec,
-            reward_mint: *self.reward_mint.key,
-            distribution_starts_at,
-            reward_max_amount_per_period,
-        })?;
-
-        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
-
-        Ok(())
+        Ok(bump)
     }
 }

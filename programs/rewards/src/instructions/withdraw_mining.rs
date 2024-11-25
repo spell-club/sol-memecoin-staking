@@ -60,8 +60,21 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         let mining = Mining::unpack(&self.mining.data.borrow())?;
 
-        // TODO: make sure it's users mining account
-        // TDO: make sure user receives spl from proper pool
+        let reward_pool_seeds = &[
+            b"reward_pool".as_ref(),
+            &reward_pool.rewards_root.to_bytes()[..32],
+            &reward_pool.liquidity_mint.to_bytes()[..32],
+            &[reward_pool.bump],
+        ];
+
+        {
+            assert_account_key(self.user, &mining.owner)?;
+            assert_account_key(self.reward_pool, &mining.reward_pool)?;
+            assert_account_key(
+                self.reward_pool,
+                &Pubkey::create_program_address(reward_pool_seeds, program_id)?,
+            )?;
+        }
 
         {
             let mining_pubkey = Pubkey::create_program_address(
@@ -74,9 +87,6 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
                 program_id,
             )?;
             assert_account_key(self.mining, &mining_pubkey)?;
-            // assert_account_key(self.deposit_authority, &reward_pool.deposit_authority)?;
-            assert_account_key(self.reward_pool, &mining.reward_pool)?;
-            assert_account_key(self.user, &mining.owner)?;
         }
 
         {
@@ -89,6 +99,21 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
             assert_account_key(self.reward_pool_spl, &spl_pubkey)?;
         }
 
+        // check if it's allowed to withdraw
+        let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp as u64;
+        if timestamp.saturating_sub(mining.last_deposit_time) < reward_pool.lock_time_sec {
+            return Err(EverlendError::LockTimeStillActive.into());
+        }
+
+        reward_pool.withdraw(mining.amount)?;
+        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
+
+        self.spl_transfer_and_close(program_id, mining.amount)?;
+
+        Ok(())
+    }
+
+    fn spl_transfer_and_close(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
         let (reward_pool_authority, bump_seed) =
             find_program_address(program_id, self.reward_pool.key);
         assert_account_key(self.reward_pool_authority, &reward_pool_authority)?;
@@ -99,18 +124,9 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
             self.reward_pool_spl.clone(),
             self.user_token_account.clone(),
             self.reward_pool_authority.clone(),
-            mining.amount,
+            amount,
             &[signers_seeds],
         )?;
-
-        // check if it's allowd to withdraw
-        let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp as u64;
-        if timestamp.saturating_sub(mining.last_deposit_time) < reward_pool.lock_time_sec {
-            return Err(EverlendError::LockTimeStillActive.into());
-        }
-
-        reward_pool.withdraw(mining.amount)?;
-        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
 
         // close mining account
         everlend_utils::cpi::system::close_account(self.mining, self.user)?;
