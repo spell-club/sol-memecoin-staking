@@ -1,5 +1,5 @@
 use crate::utils::*;
-use everlend_rewards::state::{Mining, RewardPool, RewardVault};
+use everlend_rewards::state::{Mining, RewardPool, RewardTier, RewardVault};
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
 use solana_sdk::sysvar::clock;
@@ -7,6 +7,7 @@ use solana_sdk::{signature::Keypair, signer::Signer};
 use spl_token::state::Account;
 use std::borrow::Borrow;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::vec;
 
 use super::TestRewards;
 
@@ -36,7 +37,6 @@ async fn success() {
             100,
             1,
             reward_period, // odd amount to match testing warp_to_epoch
-            clock.unix_timestamp as u64,
         )
         .await;
 
@@ -179,11 +179,15 @@ fn check_mining_maths(
     let vault = RewardVault {
         bump: 0,
         reward_mint: Keypair::new().pubkey(),
-        ratio_base: base,
-        ratio_quote: quote,
+
         reward_period_sec: period,
-        distribution_starts_at: current_timestamp,
-        reward_max_amount_per_period: max_amount,
+        reward_tiers: vec![RewardTier {
+            ratio_base: base,
+            ratio_quote: quote,
+            reward_max_amount_per_period: max_amount,
+        }],
+        is_enabled: true,
+        enabled_at: current_timestamp,
     };
 
     let mut mining = Mining::initialize(reward_pool.pubkey(), 0, owner.pubkey());

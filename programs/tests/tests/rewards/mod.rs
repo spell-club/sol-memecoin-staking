@@ -3,6 +3,7 @@ pub mod claim;
 pub mod deposit_mining;
 pub mod fill_vault;
 pub mod initialize_pool;
+pub mod upgrade_mining;
 pub mod withdraw_mining;
 
 use crate::utils::{
@@ -10,6 +11,7 @@ use crate::utils::{
     TokenHolder,
 };
 use anchor_lang::Key;
+use everlend_rewards::state::RewardTier;
 use everlend_rewards::{
     find_mining_program_address, find_reward_pool_program_address,
     find_reward_pool_spl_program_address, find_vault_program_address,
@@ -31,12 +33,11 @@ impl TestRewards {
         let rewards_root = Keypair::new();
         let root_authority = Keypair::new();
 
-        transfer_sol(context, &root_authority.pubkey(), 10_000_000)
+        transfer_sol(context, &root_authority.pubkey(), 1_000_000_000)
             .await
             .unwrap();
 
         Self {
-            // token_mint_pubkey: env.liquidity.pubkey(),
             rewards_root,
             root_authority,
         }
@@ -174,7 +175,6 @@ impl TestRewards {
         ratio_base: u64,
         ratio_quote: u64,
         reward_period_sec: u32,
-        distribution_starts_at: u64,
     ) -> Pubkey {
         let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
 
@@ -189,11 +189,12 @@ impl TestRewards {
                 reward_mint,
                 &vault_pubkey,
                 &self.root_authority.pubkey(),
-                ratio_base,
-                ratio_quote,
                 reward_period_sec,
-                distribution_starts_at,
-                0,
+                vec![RewardTier {
+                    ratio_base,
+                    ratio_quote,
+                    reward_max_amount_per_period: 0,
+                }],
             )],
             Some(&self.root_authority.pubkey()),
             &[&self.root_authority],
@@ -203,6 +204,65 @@ impl TestRewards {
         context.banks_client.process_transaction(tx).await.unwrap();
 
         vault_pubkey
+    }
+
+    pub async fn update_vault(
+        &self,
+        context: &mut ProgramTestContext,
+        liquidity_mint: &Pubkey,
+        reward_mint: &Pubkey,
+        reward_period_sec: Option<u32>,
+        is_enabled: Option<bool>,
+        tiers: Option<Vec<RewardTier>>,
+    ) {
+        let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
+
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_rewards::instruction::update_vault(
+                &everlend_rewards::id(),
+                &self.rewards_root.pubkey(),
+                &reward_pool,
+                reward_mint,
+                &self.root_authority.pubkey(),
+                reward_period_sec,
+                is_enabled,
+                tiers,
+            )],
+            Some(&self.root_authority.pubkey()),
+            &[&self.root_authority],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await.unwrap();
+    }
+
+    pub async fn upgrade_mining(
+        &self,
+        context: &mut ProgramTestContext,
+        liquidity_mint: &Pubkey,
+        user: &Pubkey,
+        tier: u8,
+    ) {
+        let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
+        let (mining_account, _) =
+            find_mining_program_address(&everlend_rewards::id(), &user, &reward_pool);
+
+        let tx = Transaction::new_signed_with_payer(
+            &[everlend_rewards::instruction::upgrade_mining(
+                &everlend_rewards::id(),
+                &self.rewards_root.pubkey(),
+                &reward_pool,
+                &mining_account,
+                &user,
+                &self.root_authority.pubkey(),
+                tier,
+            )],
+            None,
+            &[&self.root_authority],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await.unwrap();
     }
 
     pub async fn fill_vault(

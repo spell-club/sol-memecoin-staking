@@ -29,6 +29,8 @@ pub struct Mining {
     pub owner: Pubkey,
     /// last deposit time
     pub last_deposit_time: u64,
+    /// reward tier
+    pub reward_tier: u8,
     /// Reward indexes
     pub indexes: Vec<RewardIndex>,
 }
@@ -44,6 +46,7 @@ impl Mining {
             rewards_calculated_at: 0,
             last_deposit_time: 0,
             owner,
+            reward_tier: 0,
             indexes: vec![],
         }
     }
@@ -82,35 +85,47 @@ impl Mining {
         current_timestamp: u64,
     ) -> ProgramResult {
         let rewards_calculated_at = self.rewards_calculated_at;
+        let rewards_tier = self.reward_tier as usize;
 
         // first deposit - nothing to calculate
         if rewards_calculated_at != 0 {
             let amount = self.amount;
 
             for vault in vaults {
+                if !vault.is_enabled {
+                    continue;
+                }
+
                 let reward_index = self.reward_index_mut(vault.reward_mint);
 
                 // how much time passed since last reward calculation
-                let reward_period_start =
-                    cmp::max(rewards_calculated_at, vault.distribution_starts_at);
+                let reward_period_start = cmp::max(rewards_calculated_at, vault.enabled_at);
                 let reward_period = current_timestamp.saturating_sub(reward_period_start);
                 let num_periods = reward_period.div(vault.reward_period_sec as u64);
                 if num_periods == 0 {
                     continue;
                 }
 
+                // get proper reward tier idx
+                let tier_idx = cmp::min(rewards_tier, vault.reward_tiers.len().saturating_sub(1));
+
+                let tier = vault
+                    .reward_tiers
+                    .get(tier_idx)
+                    .ok_or(EverlendError::InvalidRewardTier)?;
+
                 // calculate reward amount based on coefficient
                 let rewards = (num_periods as u128)
                     .checked_mul(amount.into())
                     .ok_or(EverlendError::MathOverflow)?
-                    .checked_mul(vault.ratio_quote.into())
+                    .checked_mul(tier.ratio_quote.into())
                     .ok_or(EverlendError::MathOverflow)?
-                    .checked_div(vault.ratio_base.into())
+                    .checked_div(tier.ratio_base.into())
                     .ok_or(EverlendError::MathOverflow)? as u64;
 
                 if rewards > 0 {
-                    let rewards = if vault.reward_max_amount_per_period > 0 {
-                        std::cmp::min(rewards, vault.reward_max_amount_per_period * num_periods)
+                    let rewards = if tier.reward_max_amount_per_period > 0 {
+                        std::cmp::min(rewards, tier.reward_max_amount_per_period * num_periods)
                     } else {
                         rewards
                     };
@@ -132,7 +147,7 @@ impl Mining {
 
 impl Sealed for Mining {}
 impl Pack for Mining {
-    const LEN: usize = 1 + (32 + 1 + 8 + 8 + 32 + 8 + (4 + RewardIndex::LEN * MAX_REWARDS));
+    const LEN: usize = 1 + (32 + 1 + 8 + 8 + 32 + 8 + 1 + (4 + RewardIndex::LEN * MAX_REWARDS));
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;

@@ -7,10 +7,10 @@ use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
 
-/// Precision for index calculation
-pub const PRECISION: u128 = 10_000_000_000_000_000;
 /// Max reward vaults
-pub const MAX_REWARDS: usize = 5;
+pub const MAX_REWARDS: usize = 3;
+/// Max reward tiers
+pub const MAX_TIERS: usize = 5;
 
 /// Reward pool
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
@@ -147,19 +147,33 @@ pub struct RewardVault {
     pub bump: u8,
     /// Reward mint address
     pub reward_mint: Pubkey,
-    /// Reward ratio of deposit currency
-    pub ratio_base: u64,
-    /// Reward ratio of reward currency
-    pub ratio_quote: u64,
     /// Time period for reward calculation
     pub reward_period_sec: u32,
+    /// Is distribution enabled
+    pub is_enabled: bool,
     /// Timestamp since when distribution begins
-    pub distribution_starts_at: u64,
-    /// Maximum amount of reward per period (cap)
-    pub reward_max_amount_per_period: u64,
+    pub enabled_at: u64,
+    /// Reward tiers
+    pub reward_tiers: Vec<RewardTier>,
 }
 
 impl RewardVault {
     /// LEN
-    pub const LEN: usize = 1 + 32 + 8 + 8 + 4 + 8 + 8;
+    pub const LEN: usize = 1 + 32 + 4 + 1 + 8 + (4 + RewardTier::LEN * MAX_TIERS);
+}
+
+/// Reward vault
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, PartialEq, Eq, Clone)]
+pub struct RewardTier {
+    /// Reward ratio of deposit currency
+    pub ratio_base: u64,
+    /// Reward ratio of reward currency
+    pub ratio_quote: u64,
+    /// Maximum amount of reward per period (cap)
+    pub reward_max_amount_per_period: u64,
+}
+
+impl RewardTier {
+    /// LEN
+    pub const LEN: usize = 8 + 8 + 8;
 }

@@ -6,6 +6,8 @@ use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::clock;
 use solana_program::{system_program, sysvar};
 
+use crate::state::RewardTier;
+
 /// Instructions supported by the program
 #[derive(Debug, BorshDeserialize, BorshSerialize, PartialEq, Eq)]
 pub enum RewardsInstruction {
@@ -17,16 +19,22 @@ pub enum RewardsInstruction {
 
     /// Creates a new vault account and adds it to the reward pool
     AddVault {
-        /// Reward ratio of deposit currency
-        ratio_base: u64,
-        /// Reward ratio of reward currency
-        ratio_quote: u64,
         /// Time period for reward calculation
         reward_period_sec: u32,
-        /// Time when reward destribution begins
-        distribution_starts_at: u64,
-        /// Maximum amount of reward per period (cap)
-        reward_max_amount_per_period: u64,
+        /// Is distribution enabled
+        is_enabled: bool,
+        /// reward tiers
+        tiers: Vec<RewardTier>,
+    },
+
+    /// Updates vault parameters
+    UpdateVault {
+        /// Time period for reward calculation
+        reward_period_sec: Option<u32>,
+        /// Is distribution enabled
+        is_enabled: Option<bool>,
+        /// reward tiers
+        tiers: Option<Vec<RewardTier>>,
     },
 
     /// Fills the reward pool with rewards
@@ -46,6 +54,12 @@ pub enum RewardsInstruction {
 
     /// Claims amount of rewards
     Claim,
+
+    /// Upgrades mining account for users (admin method)
+    UpgradeMining {
+        /// set user reward tier
+        tier: u8,
+    },
 
     /// Creates and initializes a reward root
     InitializeRoot,
@@ -93,11 +107,8 @@ pub fn add_vault(
     reward_mint: &Pubkey,
     vault: &Pubkey,
     payer: &Pubkey,
-    ratio_base: u64,
-    ratio_quote: u64,
     reward_period_sec: u32,
-    distribution_starts_at: u64,
-    reward_max_amount_per_period: u64,
+    tiers: Vec<RewardTier>,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*rewards_root, false),
@@ -114,16 +125,43 @@ pub fn add_vault(
     Instruction::new_with_borsh(
         *program_id,
         &RewardsInstruction::AddVault {
-            ratio_base,
-            ratio_quote,
             reward_period_sec,
-            distribution_starts_at,
-            reward_max_amount_per_period,
+            is_enabled: true,
+            tiers,
         },
         accounts,
     )
 }
 
+/// Creates 'UpdateVault' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn update_vault(
+    program_id: &Pubkey,
+    rewards_root: &Pubkey,
+    reward_pool: &Pubkey,
+    reward_mint: &Pubkey,
+    payer: &Pubkey,
+    reward_period_sec: Option<u32>,
+    is_enabled: Option<bool>,
+    tiers: Option<Vec<RewardTier>>,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*rewards_root, false),
+        AccountMeta::new(*reward_pool, false),
+        AccountMeta::new_readonly(*reward_mint, false),
+        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(clock::id(), false),
+    ];
+    Instruction::new_with_borsh(
+        *program_id,
+        &RewardsInstruction::UpdateVault {
+            reward_period_sec,
+            is_enabled,
+            tiers,
+        },
+        accounts,
+    )
+}
 /// Creates 'FillVault' instruction.
 #[allow(clippy::too_many_arguments)]
 pub fn fill_vault(
@@ -209,6 +247,33 @@ pub fn withdraw_mining(
     ];
 
     Instruction::new_with_borsh(*program_id, &RewardsInstruction::WithdrawMining, accounts)
+}
+
+/// Creates 'UpgradeMining' instruction.
+#[allow(clippy::too_many_arguments)]
+pub fn upgrade_mining(
+    program_id: &Pubkey,
+    rewards_root: &Pubkey,
+    reward_pool: &Pubkey,
+    mining: &Pubkey,
+    user: &Pubkey,
+    authority: &Pubkey,
+    tier: u8,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new_readonly(*rewards_root, false),
+        AccountMeta::new_readonly(*reward_pool, false),
+        AccountMeta::new(*mining, false),
+        AccountMeta::new(*user, false),
+        AccountMeta::new(*authority, true),
+        AccountMeta::new_readonly(clock::id(), false),
+    ];
+
+    Instruction::new_with_borsh(
+        *program_id,
+        &RewardsInstruction::UpgradeMining { tier },
+        accounts,
+    )
 }
 
 /// Creates 'Claim' instruction.

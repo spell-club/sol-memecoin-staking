@@ -31,6 +31,10 @@ pub enum EverlendError {
     #[error("Invalid reward vault")]
     InvalidRewardVault,
 
+    /// Invalid reward tier
+    #[error("Invalid reward tier")]
+    InvalidRewardTier,
+
     #[error("Lock time is still active")]
     LockTimeStillActive,
 }

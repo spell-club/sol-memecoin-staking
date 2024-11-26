@@ -24,8 +24,6 @@ async fn success() {
     let reward_mint = Keypair::new();
     create_mint(&mut context, &reward_mint).await.unwrap();
 
-    let (clock, _) = get_clock(&mut context).await;
-
     let vault = test_reward_pool
         .add_vault(
             &mut context,
@@ -34,7 +32,6 @@ async fn success() {
             1,
             1,
             60,
-            clock.unix_timestamp as u64,
         )
         .await;
 

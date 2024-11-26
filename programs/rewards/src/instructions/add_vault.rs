@@ -11,7 +11,7 @@ use solana_program::system_program;
 use solana_program::sysvar::{clock, Sysvar, SysvarId};
 use spl_token::state::Account;
 
-use crate::state::{RewardPool, RewardVault, RewardsRoot};
+use crate::state::{RewardPool, RewardTier, RewardVault, RewardsRoot};
 
 /// Instruction context
 pub struct AddVaultContext<'a, 'b> {
@@ -36,7 +36,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let vault = AccountLoader::next_uninitialized(account_info_iter)?;
-        let payer = AccountLoader::next_signer(account_info_iter)?;
+        let authority = AccountLoader::next_signer(account_info_iter)?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
@@ -48,7 +48,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             reward_pool,
             reward_mint,
             vault,
-            payer,
+            payer: authority,
             clock,
             rent,
         })
@@ -58,11 +58,9 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     pub fn process(
         &self,
         program_id: &Pubkey,
-        ratio_base: u64,
-        ratio_quote: u64,
         reward_period_sec: u32,
-        distribution_starts_at: u64,
-        reward_max_amount_per_period: u64,
+        is_enabled: bool,
+        reward_tiers: Vec<RewardTier>,
     ) -> ProgramResult {
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         assert_account_key(self.rewards_root, &reward_pool.rewards_root)?;
@@ -73,20 +71,15 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         }
 
         let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
-        if distribution_starts_at < timestamp as u64 {
-            return Err(ProgramError::InvalidArgument);
-        }
-
         let bump = self.create_spl_acc(program_id)?;
 
         reward_pool.add_vault(RewardVault {
             bump,
-            ratio_base,
-            ratio_quote,
             reward_period_sec,
             reward_mint: *self.reward_mint.key,
-            distribution_starts_at,
-            reward_max_amount_per_period,
+            is_enabled,
+            enabled_at: if is_enabled { timestamp as u64 } else { 0 },
+            reward_tiers,
         })?;
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;

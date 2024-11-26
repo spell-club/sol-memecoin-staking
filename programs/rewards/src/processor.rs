@@ -23,22 +23,32 @@ pub fn process_instruction(
             InitializePoolContext::new(program_id, accounts)?.process(program_id, lock_time_sec)
         }
         RewardsInstruction::AddVault {
-            ratio_base,
-            ratio_quote,
             reward_period_sec,
-            distribution_starts_at,
-            reward_max_amount_per_period,
+            is_enabled,
+            tiers,
         } => {
             msg!("RewardsInstruction: AddVault");
             AddVaultContext::new(program_id, accounts)?.process(
                 program_id,
-                ratio_base,
-                ratio_quote,
                 reward_period_sec,
-                distribution_starts_at,
-                reward_max_amount_per_period,
+                is_enabled,
+                tiers,
             )
         }
+        RewardsInstruction::UpdateVault {
+            reward_period_sec,
+            is_enabled,
+            tiers,
+        } => {
+            msg!("RewardsInstruction: AddVault");
+            UpdateVaultContext::new(program_id, accounts)?.process(
+                program_id,
+                reward_period_sec,
+                is_enabled,
+                tiers,
+            )
+        }
+
         RewardsInstruction::FillVault { amount } => {
             msg!("RewardsInstruction: FillVault");
             FillVaultContext::new(program_id, accounts)?.process(program_id, amount)
@@ -54,6 +64,10 @@ pub fn process_instruction(
         RewardsInstruction::Claim => {
             msg!("RewardsInstruction: Claim");
             ClaimContext::new(program_id, accounts)?.process(program_id)
+        }
+        RewardsInstruction::UpgradeMining { tier } => {
+            msg!("RewardsInstruction: UpgradeMining");
+            UpgradeMiningContext::new(program_id, accounts)?.process(program_id, tier)
         }
         RewardsInstruction::InitializeRoot => {
             msg!("RewardsInstruction: InitializeRoot");
