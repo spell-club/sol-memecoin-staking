@@ -2,7 +2,8 @@
 members = [
   "utils",
   "tests",
-  "rewards"
+  "rewards",
+  "toolkit"
 ]
 
 [profile.release]
