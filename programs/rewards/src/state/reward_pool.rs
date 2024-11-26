@@ -13,7 +13,7 @@ pub const MAX_REWARDS: usize = 3;
 pub const MAX_TIERS: usize = 5;
 
 /// Reward pool
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub struct RewardPool {
     /// Account type - RewardPool
     pub account_type: AccountType,

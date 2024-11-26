@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use solana_program::{ed25519_program, program_pack::Pack, pubkey::Pubkey, system_instruction};
+use solana_program::{program_pack::Pack, pubkey::Pubkey, system_instruction};
 use solana_program_test::*;
 use solana_program_test::{ProgramTest, ProgramTestContext};
 use solana_sdk::clock::Clock;

@@ -1,5 +1,4 @@
 //! Program entrypoint
-#![cfg(all(target_arch = "bpf", not(feature = "no-entrypoint")))]
 use crate::processor::process_instruction;
 use everlend_utils::EverlendError;
 use solana_program::program_error::PrintProgramError;

@@ -13,7 +13,7 @@ pub mod entrypoint;
 pub use solana_program;
 use solana_program::pubkey::Pubkey;
 
-solana_program::declare_id!("ELDR7M6m1ysPXks53T7da6zkhnhJV44twXLiAgTf2VpM");
+solana_program::declare_id!("SPEzQBzoNBMTZM9wWu6WHx9HF4vcKWwGzb6RtAbehVm");
 
 /// Generates mining address
 pub fn find_mining_program_address(

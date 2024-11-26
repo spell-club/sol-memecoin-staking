@@ -6,7 +6,7 @@ use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
 
 /// Rewards Root
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub struct RewardsRoot {
     /// Account type - RewardsRoot
     pub account_type: AccountType,

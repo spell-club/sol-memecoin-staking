@@ -13,7 +13,7 @@ use std::slice::Iter;
 use super::AccountType;
 
 /// Mining
-#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default)]
+#[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema)]
 pub struct Mining {
     /// Account type - Mining
     pub account_type: AccountType,

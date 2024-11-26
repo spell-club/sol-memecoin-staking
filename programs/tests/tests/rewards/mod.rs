@@ -10,7 +10,6 @@ use crate::utils::{
     add_token_holder, create_mint, get_account, get_token_balance, transfer_sol, BanksClientResult,
     TokenHolder,
 };
-use anchor_lang::Key;
 use everlend_rewards::state::RewardTier;
 use everlend_rewards::{
     find_mining_program_address, find_reward_pool_program_address,
@@ -283,7 +282,7 @@ impl TestRewards {
                 &reward_pool,
                 reward_mint,
                 &vault_pubkey,
-                &from.token_account.key(),
+                &from.token_account,
                 &from.owner.pubkey(),
                 amount,
             )],

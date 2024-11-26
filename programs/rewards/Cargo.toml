@@ -8,7 +8,7 @@ no-entrypoint = []
 test-bpf = []
 
 [dependencies]
-solana-program = "1.18"
+solana-program = "1.18.26"
 spl-token = { version = "4", features = [ "no-entrypoint" ] }
 everlend-utils = { path = "../utils" }
 borsh = { version = "1.5", features = ["derive"] }
