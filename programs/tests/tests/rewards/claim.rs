@@ -100,6 +100,15 @@ async fn success() {
 
     /////////////
     let user_reward_account = Keypair::new();
+    create_token_account(
+        &mut context,
+        &user_reward_account,
+        &reward_mint.pubkey(),
+        &token_holder.owner.pubkey(),
+        0,
+    )
+    .await
+    .unwrap();
 
     test_reward_pool
         .claim(
@@ -107,7 +116,7 @@ async fn success() {
             &token_holder.owner,
             &pool_mint.pubkey(),
             &reward_mint.pubkey(),
-            &user_reward_account,
+            &user_reward_account.pubkey(),
         )
         .await
         .unwrap();

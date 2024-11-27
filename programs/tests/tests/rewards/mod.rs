@@ -300,7 +300,7 @@ impl TestRewards {
         user: &Keypair,
         liquidity_mint: &Pubkey,
         reward_mint: &Pubkey,
-        user_reward_token_account: &Keypair,
+        user_reward_token_account: &Pubkey,
     ) -> BanksClientResult<()> {
         let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
 
@@ -318,10 +318,10 @@ impl TestRewards {
                 &vault_pubkey,
                 &mining_account,
                 &user.pubkey(),
-                &user_reward_token_account.pubkey(),
+                &user_reward_token_account,
             )],
             None,
-            &[user, user_reward_token_account],
+            &[user],
             context.last_blockhash,
         );
 

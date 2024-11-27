@@ -31,3 +31,4 @@ target/
 
 # Docs
 docs/
+.env

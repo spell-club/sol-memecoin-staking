@@ -1,8 +1,11 @@
+use std::str::FromStr;
+
 use solana_program::{
     account_info::AccountInfo,
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
+    pubkey::Pubkey,
 };
 
 /// Initialize SPL mint instruction.
@@ -123,4 +126,17 @@ pub fn sync_native(account: AccountInfo) -> Result<(), ProgramError> {
     let ix = spl_token::instruction::sync_native(&spl_token::id(), account.key)?;
 
     invoke(&ix, &[account])
+}
+
+pub fn find_associated_token_account(wallet_address: &Pubkey, token_mint: &Pubkey) -> (Pubkey, u8) {
+    let ata_program_id = Pubkey::from_str("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL").unwrap();
+
+    Pubkey::find_program_address(
+        &[
+            &wallet_address.to_bytes(),
+            &spl_token::id().to_bytes(),
+            &token_mint.to_bytes(),
+        ],
+        &ata_program_id,
+    )
 }

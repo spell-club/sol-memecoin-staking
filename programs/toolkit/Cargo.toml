@@ -10,3 +10,5 @@ solana-client = "1.18.26"
 solana-sdk = "1.18.26"
 solana-program = "1.18.26"
 everlend-rewards = { path = "../rewards", features = ["no-entrypoint"] }
+everlend-utils = { path = "../utils"}
+dotenv = "0.15.0"

@@ -1,15 +1,13 @@
 use crate::state::{Mining, RewardPool};
-use everlend_utils::{assert_account_key, AccountLoader, EverlendError};
+use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
 use solana_program::system_program;
-use solana_program::sysvar::{clock, Sysvar, SysvarId};
-use spl_token::state::Account;
+use solana_program::sysvar::{clock, Sysvar};
 
 /// Instruction context
 pub struct ClaimContext<'a, 'b> {
@@ -20,7 +18,6 @@ pub struct ClaimContext<'a, 'b> {
     user: &'a AccountInfo<'b>,
     user_reward_token_account: &'a AccountInfo<'b>,
     clock: &'a AccountInfo<'b>,
-    rent: &'a AccountInfo<'b>,
 }
 
 impl<'a, 'b> ClaimContext<'a, 'b> {
@@ -36,12 +33,12 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         let vault = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let mining = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let user = AccountLoader::next_signer(account_info_iter)?;
-        let user_reward_token_account = AccountLoader::next_unchecked(account_info_iter)?; // unchecked so we can create on the fly
+        let user_reward_token_account =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let _token_program = AccountLoader::next_with_key(account_info_iter, &spl_token::id())?;
         let _system_program =
             AccountLoader::next_with_key(account_info_iter, &system_program::id())?;
         let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
-        let rent = AccountLoader::next_with_key(account_info_iter, &Rent::id())?;
 
         Ok(ClaimContext {
             reward_pool,
@@ -51,7 +48,6 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
             user,
             user_reward_token_account,
             clock,
-            rent,
         })
     }
 
@@ -123,26 +119,6 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
     pub fn spl_transfer_reward(&self, amount: u64, seeds: &[&[u8]]) -> ProgramResult {
         if amount == 0 {
             return Ok(());
-        }
-
-        // create user token account if it does not exist
-        if self.user_reward_token_account.owner.eq(&Pubkey::default()) {
-            everlend_utils::cpi::system::create_account::<Account>(
-                &spl_token::id(),
-                self.user.clone(),
-                self.user_reward_token_account.clone(),
-                &[],
-                &Rent::from_account_info(self.rent)?,
-            )?;
-
-            everlend_utils::cpi::spl_token::initialize_account(
-                self.user_reward_token_account.clone(),
-                self.reward_mint.clone(),
-                self.user.clone(),
-                self.rent.clone(),
-            )?;
-        } else if !self.user_reward_token_account.owner.eq(&spl_token::id()) {
-            return Err(EverlendError::InvalidAccountOwner.into());
         }
 
         everlend_utils::cpi::spl_token::transfer(

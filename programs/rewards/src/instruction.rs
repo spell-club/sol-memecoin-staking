@@ -106,7 +106,7 @@ pub fn add_vault(
     reward_pool: &Pubkey,
     reward_mint: &Pubkey,
     vault: &Pubkey,
-    payer: &Pubkey,
+    authority: &Pubkey,
     reward_period_sec: u32,
     tiers: Vec<RewardTier>,
 ) -> Instruction {
@@ -115,7 +115,7 @@ pub fn add_vault(
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
-        AccountMeta::new(*payer, true),
+        AccountMeta::new(*authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(clock::id(), false),
@@ -169,7 +169,7 @@ pub fn fill_vault(
     reward_pool: &Pubkey,
     reward_mint: &Pubkey,
     vault: &Pubkey,
-    from: &Pubkey,
+    from_token_account: &Pubkey,
     authority: &Pubkey,
     amount: u64,
 ) -> Instruction {
@@ -177,7 +177,7 @@ pub fn fill_vault(
         AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
-        AccountMeta::new(*from, false),
+        AccountMeta::new(*from_token_account, false),
         AccountMeta::new(*authority, true),
         AccountMeta::new_readonly(spl_token::id(), false),
     ];
@@ -300,11 +300,10 @@ pub fn claim(
         AccountMeta::new(*vault, false),
         AccountMeta::new(*mining, false),
         AccountMeta::new(*user, true),
-        AccountMeta::new(*user_reward_token, true),
+        AccountMeta::new(*user_reward_token, false),
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(clock::id(), false),
-        AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
     Instruction::new_with_borsh(*program_id, &RewardsInstruction::Claim, accounts)
