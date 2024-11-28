@@ -65,10 +65,11 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         Ok(())
     }
 
-    /// create pool account
+    /// create pool token account
     pub fn create_spl_acc(&self, program_id: &Pubkey) -> ProgramResult {
         {
             let bump = {
+                // I suggest to keep assers logic at main process rather than slit it between diff functions
                 let (spl_pubkey, bump) = find_reward_pool_spl_program_address(
                     program_id,
                     self.reward_pool.key,

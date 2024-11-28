@@ -31,6 +31,7 @@ pub fn find_mining_program_address(
     )
 }
 
+// A bit confusing cause vault it's internal struct. Here it's token account
 /// Generates vault address
 pub fn find_vault_program_address(
     program_id: &Pubkey,
@@ -64,6 +65,8 @@ pub fn find_reward_pool_program_address(
 }
 
 /// Generates reward pool address
+// Fix comment
+// Rename find_reward_pool_spl_program_address -> find_reward_pool_spl_token_account?
 pub fn find_reward_pool_spl_program_address(
     program_id: &Pubkey,
     pool_account: &Pubkey,
