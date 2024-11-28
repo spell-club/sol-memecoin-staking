@@ -317,6 +317,7 @@ pub fn initialize_root(
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new(*rewards_root, true),
+          // As I remember for signer authority readonly rights is enough
         AccountMeta::new(*authority, true),
         AccountMeta::new_readonly(system_program::id(), false),
         AccountMeta::new_readonly(sysvar::rent::id(), false),

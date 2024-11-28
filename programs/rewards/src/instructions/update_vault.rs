@@ -28,6 +28,7 @@ impl<'a, 'b> UpdateVaultContext<'a, 'b> {
 
         let rewards_root = AccountLoader::next_with_owner(account_info_iter, program_id)?;
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
+        // Unused as a account. Could be passed as param
         let reward_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let payer = AccountLoader::next_signer(account_info_iter)?;
         let clock = AccountLoader::next_with_key(account_info_iter, &clock::id())?;
@@ -62,7 +63,8 @@ impl<'a, 'b> UpdateVaultContext<'a, 'b> {
             .iter_mut()
             .find(|v| &v.reward_mint == self.reward_mint.key)
             .ok_or(ProgramError::InvalidArgument)?;
-
+        
+        // Note: change of rewards period affect all unclaimed rewards
         if let Some(reward_period_sec) = reward_period_sec {
             vault.reward_period_sec = reward_period_sec;
         }

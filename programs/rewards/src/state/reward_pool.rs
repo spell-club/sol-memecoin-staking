@@ -54,7 +54,7 @@ impl RewardPool {
         {
             return Err(ProgramError::InvalidArgument);
         }
-
+        // TODO account len is static. check len for overflow
         self.vaults.push(reward);
 
         Ok(())
@@ -68,7 +68,8 @@ impl RewardPool {
             .total_amount
             .checked_add(amount)
             .ok_or(EverlendError::MathOverflow)?;
-
+        
+        // Probably move this logic into Mining struct?
         mining.amount = mining
             .amount
             .checked_add(amount)
@@ -143,6 +144,7 @@ impl IsInitialized for RewardPool {
 /// Reward vault
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default, Clone)]
 pub struct RewardVault {
+    // Confusing comment. It's a bump of vault token account
     /// Bump of vault account
     pub bump: u8,
     /// Reward mint address

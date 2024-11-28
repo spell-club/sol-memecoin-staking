@@ -9,12 +9,16 @@ use solana_program::pubkey::Pubkey;
 /// Instruction context
 pub struct FillVaultContext<'a, 'b> {
     reward_pool: &'a AccountInfo<'b>,
+    // Not used as account. Could be passed as param
     reward_mint: &'a AccountInfo<'b>,
+    // I suggest to rename it to vault_token_account or simmilar. Cause You already have vault name as internal struct 
     vault: &'a AccountInfo<'b>,
     source_token_account: &'a AccountInfo<'b>,
     authority: &'a AccountInfo<'b>,
 }
 
+// Do this instruction has any additional value?
+// It's not overhead to make separate intruction instead of spl_transfer(from, to) on BE or somewhere?
 impl<'a, 'b> FillVaultContext<'a, 'b> {
     /// New instruction context
     pub fn new(

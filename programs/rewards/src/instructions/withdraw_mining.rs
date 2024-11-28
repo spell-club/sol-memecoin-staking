@@ -108,6 +108,8 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
         reward_pool.withdraw(mining.amount)?;
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
 
+        // If user makes unstake w\o claim he lose all rewards?
+        // Why partial withdraw disallowed?
         self.spl_transfer_and_close(program_id, mining.amount)?;
 
         Ok(())

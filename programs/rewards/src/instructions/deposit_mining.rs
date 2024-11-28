@@ -14,6 +14,7 @@ use solana_program::sysvar::{clock, Sysvar, SysvarId};
 /// Instruction context
 pub struct DepositMiningContext<'a, 'b> {
     reward_pool: &'a AccountInfo<'b>,
+    // reward_pool_spl -> reward_pool_spl_token_account ?
     reward_pool_spl: &'a AccountInfo<'b>,
     liquidity_mint: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
@@ -95,7 +96,8 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
             amount,
             &[],
         )?;
-
+        
+        // You do not refresh rewards if mining amount > 0 ?
         reward_pool.deposit(&mut mining, amount, timestamp as u64)?;
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;

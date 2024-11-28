@@ -97,6 +97,9 @@ impl Mining {
                 }
 
                 let reward_index = self.reward_index_mut(vault.reward_mint);
+                
+                // Do we should here also count deposited at time?
+                // E.g Now 110 sec. User did deposit at 100. rewards_calculated_at = 0. enabled_at = 10.
 
                 // how much time passed since last reward calculation
                 let reward_period_start = cmp::max(rewards_calculated_at, vault.enabled_at);
@@ -138,6 +141,7 @@ impl Mining {
             }
         }
 
+        //  ?
         // update deposit_timestamp
         self.rewards_calculated_at = current_timestamp;
 

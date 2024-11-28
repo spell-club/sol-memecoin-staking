@@ -90,6 +90,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     /// creates vault spl token account
     pub fn create_spl_acc(&self, program_id: &Pubkey) -> Result<u8, ProgramError> {
         let bump = {
+            // I guess better to move this general check into process func 
             let (vault_pubkey, bump) =
                 find_vault_program_address(program_id, self.reward_pool.key, self.reward_mint.key);
             assert_account_key(self.vault, &vault_pubkey)?;
