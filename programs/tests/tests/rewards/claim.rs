@@ -186,7 +186,7 @@ fn check_mining_maths(
         .as_secs();
 
     let vault = RewardVault {
-        bump: 0,
+        vault_token_account_bump: 0,
         reward_mint: Keypair::new().pubkey(),
 
         reward_period_sec: period,

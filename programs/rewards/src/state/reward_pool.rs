@@ -55,6 +55,10 @@ impl RewardPool {
             return Err(ProgramError::InvalidArgument);
         }
 
+        if self.vaults.len() == MAX_REWARDS {
+            return Err(EverlendError::InvalidRewardVault.into());
+        }
+
         self.vaults.push(reward);
 
         Ok(())
@@ -144,7 +148,7 @@ impl IsInitialized for RewardPool {
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema, Default, Clone)]
 pub struct RewardVault {
     /// Bump of vault account
-    pub bump: u8,
+    pub vault_token_account_bump: u8,
     /// Reward mint address
     pub reward_mint: Pubkey,
     /// Time period for reward calculation

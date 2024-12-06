@@ -1,5 +1,5 @@
 use crate::state::{Mining, RewardPool};
-use crate::{find_mining_program_address, find_reward_pool_spl_program_address};
+use crate::{find_mining_program_address, find_reward_pool_spl_token_account};
 use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
@@ -14,7 +14,7 @@ use solana_program::sysvar::{clock, Sysvar, SysvarId};
 /// Instruction context
 pub struct DepositMiningContext<'a, 'b> {
     reward_pool: &'a AccountInfo<'b>,
-    reward_pool_spl: &'a AccountInfo<'b>,
+    reward_pool_spl_token_account: &'a AccountInfo<'b>,
     liquidity_mint: &'a AccountInfo<'b>,
     mining: &'a AccountInfo<'b>,
     user_token_account: &'a AccountInfo<'b>,
@@ -31,7 +31,8 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
     ) -> Result<DepositMiningContext<'a, 'b>, ProgramError> {
         let account_info_iter = &mut accounts.iter().enumerate();
         let reward_pool = AccountLoader::next_with_owner(account_info_iter, program_id)?;
-        let reward_pool_spl = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
+        let reward_pool_spl_token_account =
+            AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let liquidity_mint = AccountLoader::next_with_owner(account_info_iter, &spl_token::id())?;
         let mining = AccountLoader::next_unchecked(account_info_iter)?; // unchecked so we can create on the fly
         let user_token_account =
@@ -46,7 +47,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
 
         Ok(DepositMiningContext {
             reward_pool,
-            reward_pool_spl,
+            reward_pool_spl_token_account,
             liquidity_mint,
             mining,
             user_token_account,
@@ -76,13 +77,13 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
 
         let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         {
-            let (spl_pubkey, _) = find_reward_pool_spl_program_address(
+            let (spl_pubkey, _) = find_reward_pool_spl_token_account(
                 program_id,
                 self.reward_pool.key,
                 self.liquidity_mint.key,
             );
 
-            assert_account_key(self.reward_pool_spl, &spl_pubkey)?;
+            assert_account_key(self.reward_pool_spl_token_account, &spl_pubkey)?;
         }
 
         let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
@@ -90,7 +91,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
         // Transfer token from source to token account
         everlend_utils::cpi::spl_token::transfer(
             self.user_token_account.clone(),
-            self.reward_pool_spl.clone(),
+            self.reward_pool_spl_token_account.clone(),
             self.user.clone(),
             amount,
             &[],

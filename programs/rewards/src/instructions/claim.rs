@@ -90,7 +90,7 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
                 .iter()
                 .find(|v| &v.reward_mint == self.reward_mint.key)
                 .ok_or(ProgramError::InvalidArgument)?
-                .bump;
+                .vault_token_account_bump;
 
             let vault_seeds = &[
                 b"vault".as_ref(),

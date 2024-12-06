@@ -1,4 +1,4 @@
-use crate::find_vault_program_address;
+use crate::find_vault_spl_token_account;
 use everlend_utils::{assert_account_key, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Clock;
@@ -70,11 +70,22 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             assert_account_key(self.payer, &rewards_root.authority)?;
         }
 
+        let vault_bump = {
+            let (vault, bump) = find_vault_spl_token_account(
+                program_id,
+                self.reward_pool.key,
+                self.reward_mint.key,
+            );
+            assert_account_key(self.vault, &vault)?;
+
+            bump
+        };
+
         let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
-        let bump = self.create_spl_acc(program_id)?;
+        let bump = self.create_spl_acc(vault_bump)?;
 
         reward_pool.add_vault(RewardVault {
-            bump,
+            vault_token_account_bump: bump,
             reward_period_sec,
             reward_mint: *self.reward_mint.key,
             is_enabled,
@@ -88,15 +99,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     }
 
     /// creates vault spl token account
-    pub fn create_spl_acc(&self, program_id: &Pubkey) -> Result<u8, ProgramError> {
-        let bump = {
-            let (vault_pubkey, bump) =
-                find_vault_program_address(program_id, self.reward_pool.key, self.reward_mint.key);
-            assert_account_key(self.vault, &vault_pubkey)?;
-
-            bump
-        };
-
+    pub fn create_spl_acc(&self, bump: u8) -> Result<u8, ProgramError> {
         let signers_seeds = &[
             b"vault".as_ref(),
             self.reward_pool.key.as_ref(),

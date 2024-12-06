@@ -1,5 +1,5 @@
 use crate::state::{InitRewardPoolParams, RewardPool, RewardsRoot};
-use crate::{find_reward_pool_program_address, find_reward_pool_spl_program_address};
+use crate::{find_reward_pool_program_address, find_reward_pool_spl_token_account};
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
@@ -65,11 +65,11 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         Ok(())
     }
 
-    /// create pool account
+    /// create pool token account
     pub fn create_spl_acc(&self, program_id: &Pubkey) -> ProgramResult {
         {
             let bump = {
-                let (spl_pubkey, bump) = find_reward_pool_spl_program_address(
+                let (spl_pubkey, bump) = find_reward_pool_spl_token_account(
                     program_id,
                     self.reward_pool.key,
                     self.liquidity_mint.key,

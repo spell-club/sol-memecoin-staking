@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use dotenv::dotenv;
 use everlend_rewards::{
-    find_reward_pool_program_address, find_reward_pool_spl_program_address,
-    find_vault_program_address,
-    instruction::{add_vault, fill_vault, initialize_pool, initialize_root},
+    find_reward_pool_program_address, find_reward_pool_spl_token_account,
+    find_vault_spl_token_account,
+    instruction::{add_vault, fill_vault, initialize_pool, initialize_root, update_vault},
     state::RewardTier,
 };
 use solana_client::rpc_client::RpcClient;
@@ -50,13 +50,21 @@ fn main() {
     //     &reward_mint,
     // );
 
-    send_fill_vault(
+    send_update_vault(
         &rpc_client,
         &reward_authority,
         &rewards_root.pubkey(),
         &liquidity_mint,
         &reward_mint,
-    )
+    );
+
+    // send_fill_vault(
+    //     &rpc_client,
+    //     &reward_authority,
+    //     &rewards_root.pubkey(),
+    //     &liquidity_mint,
+    //     &reward_mint,
+    // )
 }
 
 fn send_initialize_pool(
@@ -70,7 +78,7 @@ fn send_initialize_pool(
         find_reward_pool_program_address(&everlend_rewards::id(), rewards_root, liquidity_mint);
 
     let (reward_pool_spl, _) =
-        find_reward_pool_spl_program_address(&everlend_rewards::id(), &reward_pool, liquidity_mint);
+        find_reward_pool_spl_token_account(&everlend_rewards::id(), &reward_pool, liquidity_mint);
 
     let (reward_pool_authority, _) =
         Pubkey::find_program_address(&[&reward_pool.to_bytes()[..32]], &everlend_rewards::id());
@@ -132,7 +140,7 @@ fn send_add_vault(
         find_reward_pool_program_address(&everlend_rewards::id(), rewards_root, liquidity_mint);
 
     let (vault, _) =
-        find_vault_program_address(&everlend_rewards::id(), &reward_pool, &reward_mint);
+        find_vault_spl_token_account(&everlend_rewards::id(), &reward_pool, &reward_mint);
 
     let ix = add_vault(
         &everlend_rewards::id(),
@@ -167,6 +175,55 @@ fn send_add_vault(
     send_tx(&rpc_client, transaction);
 }
 
+fn send_update_vault(
+    rpc_client: &RpcClient,
+    reward_authority: &Keypair,
+    rewards_root: &Pubkey,
+    liquidity_mint: &Pubkey,
+    reward_mint: &Pubkey,
+) {
+    // Create the transaction instruction
+    let (reward_pool, _) =
+        find_reward_pool_program_address(&everlend_rewards::id(), rewards_root, liquidity_mint);
+
+    let ix = update_vault(
+        &everlend_rewards::id(),
+        &rewards_root,
+        &reward_pool,
+        &reward_mint,
+        &reward_authority.pubkey(),
+        None,
+        None,
+        Some(vec![
+            RewardTier {
+                ratio_base: 1000,
+                ratio_quote: 1,
+                reward_max_amount_per_period: 2,
+            },
+            RewardTier {
+                ratio_base: 1000,
+                ratio_quote: 2,
+                reward_max_amount_per_period: 4,
+            },
+            RewardTier {
+                ratio_base: 1000,
+                ratio_quote: 4,
+                reward_max_amount_per_period: 6,
+            },
+        ]),
+    );
+
+    // Build the transaction
+    let transaction = Transaction::new_signed_with_payer(
+        &[ix], // Instructions to execute
+        Some(&reward_authority.pubkey()),
+        &[&reward_authority],       // Signers
+        get_blockhash(&rpc_client), // Recent blockhash
+    );
+
+    send_tx(&rpc_client, transaction);
+}
+
 fn send_fill_vault(
     rpc_client: &RpcClient,
     reward_authority: &Keypair,
@@ -179,7 +236,7 @@ fn send_fill_vault(
         find_reward_pool_program_address(&everlend_rewards::id(), rewards_root, liquidity_mint);
 
     let (vault, _) =
-        find_vault_program_address(&everlend_rewards::id(), &reward_pool, &reward_mint);
+        find_vault_spl_token_account(&everlend_rewards::id(), &reward_pool, &reward_mint);
 
     let (token_account, _) = everlend_utils::cpi::spl_token::find_associated_token_account(
         &reward_authority.pubkey(),

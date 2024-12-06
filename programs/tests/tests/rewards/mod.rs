@@ -13,7 +13,7 @@ use crate::utils::{
 use everlend_rewards::state::RewardTier;
 use everlend_rewards::{
     find_mining_program_address, find_reward_pool_program_address,
-    find_reward_pool_spl_program_address, find_vault_program_address,
+    find_reward_pool_spl_token_account, find_vault_spl_token_account,
 };
 use everlend_utils::find_program_address;
 use solana_program::pubkey::Pubkey;
@@ -49,7 +49,7 @@ impl TestRewards {
             liquidity_mint,
         );
 
-        let (reward_pool_spl, _) = find_reward_pool_spl_program_address(
+        let (reward_pool_spl, _) = find_reward_pool_spl_token_account(
             &everlend_rewards::id(),
             &reward_pool,
             liquidity_mint,
@@ -178,7 +178,7 @@ impl TestRewards {
         let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
 
         let (vault_pubkey, _) =
-            find_vault_program_address(&everlend_rewards::id(), &reward_pool, reward_mint);
+            find_vault_spl_token_account(&everlend_rewards::id(), &reward_pool, reward_mint);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::add_vault(
@@ -274,7 +274,7 @@ impl TestRewards {
     ) -> BanksClientResult<()> {
         let (reward_pool, _) = self.get_pool_addresses(liquidity_mint);
         let (vault_pubkey, _) =
-            find_vault_program_address(&everlend_rewards::id(), &reward_pool, reward_mint);
+            find_vault_spl_token_account(&everlend_rewards::id(), &reward_pool, reward_mint);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::fill_vault(
@@ -308,7 +308,7 @@ impl TestRewards {
             find_mining_program_address(&everlend_rewards::id(), &user.pubkey(), &reward_pool);
 
         let (vault_pubkey, _) =
-            find_vault_program_address(&everlend_rewards::id(), &reward_pool, reward_mint);
+            find_vault_spl_token_account(&everlend_rewards::id(), &reward_pool, reward_mint);
 
         let tx = Transaction::new_signed_with_payer(
             &[everlend_rewards::instruction::claim(

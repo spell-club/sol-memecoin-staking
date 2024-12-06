@@ -138,7 +138,7 @@ impl Mining {
             }
         }
 
-        // update deposit_timestamp
+        // update rewards calculation timestamp
         self.rewards_calculated_at = current_timestamp;
 
         Ok(())

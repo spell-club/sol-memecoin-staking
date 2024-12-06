@@ -1,4 +1,4 @@
-use crate::find_reward_pool_spl_program_address;
+use crate::find_reward_pool_spl_token_account;
 use crate::state::{Mining, RewardPool};
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader, EverlendError};
 use solana_program::account_info::AccountInfo;
@@ -90,7 +90,7 @@ impl<'a, 'b> WithdrawMiningContext<'a, 'b> {
         }
 
         {
-            let (spl_pubkey, _) = find_reward_pool_spl_program_address(
+            let (spl_pubkey, _) = find_reward_pool_spl_token_account(
                 program_id,
                 self.reward_pool.key,
                 self.liquidity_mint.key,
