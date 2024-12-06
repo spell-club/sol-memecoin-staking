@@ -89,6 +89,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             reward_period_sec,
             reward_mint: *self.reward_mint.key,
             is_enabled,
+            claimed_total_amount: 0,
             enabled_at: if is_enabled { timestamp as u64 } else { 0 },
             reward_tiers,
         })?;

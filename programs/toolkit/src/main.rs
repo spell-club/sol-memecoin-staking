@@ -92,6 +92,7 @@ fn send_initialize_pool(
         liquidity_mint,
         &reward_authority.pubkey(),
         0,
+        1000,
     );
 
     // Build the transaction

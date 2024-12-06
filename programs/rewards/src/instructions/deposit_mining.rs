@@ -59,7 +59,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
 
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey, amount: u64) -> ProgramResult {
-        let mut mining = self.check_and_init_mining(program_id)?;
+        let (mut mining, is_first_deposit) = self.check_and_init_mining(program_id)?;
         {
             let mining_pubkey = Pubkey::create_program_address(
                 &[
@@ -97,7 +97,7 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
             &[],
         )?;
 
-        reward_pool.deposit(&mut mining, amount, timestamp as u64)?;
+        reward_pool.deposit(&mut mining, amount, is_first_deposit, timestamp as u64)?;
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
         Mining::pack(mining, *self.mining.data.borrow_mut())?;
@@ -106,19 +106,21 @@ impl<'a, 'b> DepositMiningContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn check_and_init_mining(&self, program_id: &Pubkey) -> Result<Mining, ProgramError> {
+    pub fn check_and_init_mining(
+        &self,
+        program_id: &Pubkey,
+    ) -> Result<(Mining, bool), ProgramError> {
         if self.mining.owner.eq(&Pubkey::default()) {
             // create account
             let bump = self.create_mining_acc(program_id)?;
-            return Ok(Mining::initialize(
-                *self.reward_pool.key,
-                bump,
-                *self.user.key,
+            return Ok((
+                Mining::initialize(*self.reward_pool.key, bump, *self.user.key),
+                true,
             ));
         }
 
         if self.mining.owner.eq(program_id) {
-            return Ok(Mining::unpack(&self.mining.data.borrow())?);
+            return Ok((Mining::unpack(&self.mining.data.borrow())?, false));
         }
 
         Err(ProgramError::InvalidAccountOwner)

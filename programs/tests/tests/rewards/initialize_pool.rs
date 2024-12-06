@@ -17,9 +17,10 @@ async fn success() {
 
     let pool_mint = Keypair::new();
     let lock_time_sec = 60;
+    let max_stakers = 5;
 
     let (reward_pool, reward_pool_spl) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &pool_mint, lock_time_sec)
+        .create_mint_and_initialize_pool(&mut context, &pool_mint, lock_time_sec, max_stakers)
         .await
         .unwrap();
 
@@ -33,6 +34,7 @@ async fn success() {
 
     assert_eq!(reward_pool_account.liquidity_mint, pool_mint.pubkey());
     assert_eq!(reward_pool_account.lock_time_sec, lock_time_sec);
+    assert_eq!(reward_pool_account.max_stakers, max_stakers);
 
     let reward_pool_spl_account = get_account(&mut context, &reward_pool_spl).await;
     let reward_pool_spl = Account::unpack(reward_pool_spl_account.data.borrow()).unwrap();

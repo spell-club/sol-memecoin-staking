@@ -53,14 +53,19 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey, lock_time_sec: u64) -> ProgramResult {
+    pub fn process(
+        &self,
+        program_id: &Pubkey,
+        lock_time_sec: u64,
+        max_stakers: u64,
+    ) -> ProgramResult {
         {
             let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
             assert_account_key(self.payer, &rewards_root.authority)?;
         }
 
         self.create_spl_acc(program_id)?;
-        self.create_rewards_pool_acc(program_id, lock_time_sec)?;
+        self.create_rewards_pool_acc(program_id, lock_time_sec, max_stakers)?;
 
         Ok(())
     }
@@ -113,6 +118,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         &self,
         program_id: &Pubkey,
         lock_time_sec: u64,
+        max_stakers: u64,
     ) -> ProgramResult {
         let bump = {
             let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
@@ -144,6 +150,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
             bump,
             lock_time_sec,
             liquidity_mint: *self.liquidity_mint.key,
+            max_stakers,
         });
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;

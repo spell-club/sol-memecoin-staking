@@ -54,7 +54,7 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
     /// Process instruction
     pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
         let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
-        let reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
+        let mut reward_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
         let mut mining = Mining::unpack(&self.mining.data.borrow())?;
 
         {
@@ -107,9 +107,11 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
 
         mining.refresh_rewards(reward_pool.vaults.iter(), timestamp as u64)?;
         let reward_amount = mining.flush_rewards(*self.reward_mint.key);
+        reward_pool.update_vault_totals(*self.reward_mint.key, reward_amount)?;
 
         self.spl_transfer_reward(reward_amount, reward_pool_seeds)?;
 
+        RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
         Mining::pack(mining, *self.mining.data.borrow_mut())?;
 
         Ok(())

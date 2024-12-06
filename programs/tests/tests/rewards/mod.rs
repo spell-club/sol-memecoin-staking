@@ -63,6 +63,7 @@ impl TestRewards {
         context: &mut ProgramTestContext,
         liquidity_mint: &Keypair,
         lock_time_sec: u64,
+        max_stakers: u64,
     ) -> BanksClientResult<(Pubkey, Pubkey)> {
         create_mint(context, liquidity_mint).await.unwrap();
 
@@ -86,6 +87,7 @@ impl TestRewards {
                     &liquidity_mint.pubkey(),
                     &self.root_authority.pubkey(),
                     lock_time_sec,
+                    max_stakers,
                 ),
             ],
             Some(&self.root_authority.pubkey()),
@@ -93,7 +95,7 @@ impl TestRewards {
             context.last_blockhash,
         );
 
-        let _ = context.banks_client.process_transaction(tx).await;
+        context.banks_client.process_transaction(tx).await?;
 
         Ok((reward_pool, reward_pool_spl))
     }
@@ -127,7 +129,7 @@ impl TestRewards {
             context.last_blockhash,
         );
 
-        let _ = context.banks_client.process_transaction(tx).await;
+        context.banks_client.process_transaction(tx).await?;
 
         Ok(mining_account)
     }

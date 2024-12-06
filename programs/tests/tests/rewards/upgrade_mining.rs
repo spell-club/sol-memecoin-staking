@@ -16,7 +16,7 @@ async fn success() {
     let pool_mint = Keypair::new();
 
     let (reward_pool_pubkey, _) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &pool_mint, 0)
+        .create_mint_and_initialize_pool(&mut context, &pool_mint, 0, 5)
         .await
         .unwrap();
 

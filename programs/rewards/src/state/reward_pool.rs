@@ -23,6 +23,10 @@ pub struct RewardPool {
     pub bump: u8,
     /// Liquidity mint
     pub liquidity_mint: Pubkey,
+    /// max stakers
+    pub max_stakers: u64,
+    /// max stakers
+    pub total_stakers: u64,
     /// Total staked amount
     pub total_amount: u64,
     /// staking lock time
@@ -40,8 +44,25 @@ impl RewardPool {
             bump: params.bump,
             liquidity_mint: params.liquidity_mint,
             total_amount: 0,
+            total_stakers: 0,
             lock_time_sec: params.lock_time_sec,
             vaults: vec![],
+            max_stakers: params.max_stakers,
+        }
+    }
+
+    /// Returns reward index
+    pub fn update_vault_totals(&mut self, reward_mint: Pubkey, amount: u64) -> ProgramResult {
+        match self
+            .vaults
+            .iter()
+            .position(|mi| mi.reward_mint == reward_mint)
+        {
+            Some(i) => {
+                self.vaults[i].claimed_total_amount += amount;
+                Ok(())
+            }
+            None => Err(EverlendError::InvalidRewardVault.into()),
         }
     }
 
@@ -65,8 +86,22 @@ impl RewardPool {
     }
 
     /// Process deposit
-    pub fn deposit(&mut self, mining: &mut Mining, amount: u64, timestamp: u64) -> ProgramResult {
+    pub fn deposit(
+        &mut self,
+        mining: &mut Mining,
+        amount: u64,
+        is_first_deposit: bool,
+        timestamp: u64,
+    ) -> ProgramResult {
         mining.refresh_rewards(self.vaults.iter(), timestamp)?;
+
+        if is_first_deposit {
+            if self.max_stakers > 0 && self.total_stakers >= self.max_stakers {
+                return Err(EverlendError::PoolIsFull.into());
+            }
+
+            self.total_stakers += 1;
+        }
 
         self.total_amount = self
             .total_amount
@@ -90,6 +125,8 @@ impl RewardPool {
             .checked_sub(amount)
             .ok_or(EverlendError::MathOverflow)?;
 
+        self.total_stakers -= 1;
+
         Ok(())
     }
 
@@ -99,10 +136,12 @@ impl RewardPool {
             account_type: AccountType::RewardPool,
             rewards_root: deprecated_pool.rewards_root,
             bump: deprecated_pool.bump,
+            total_stakers: deprecated_pool.total_stakers,
             liquidity_mint: deprecated_pool.liquidity_mint,
             total_amount: deprecated_pool.total_amount,
             lock_time_sec: deprecated_pool.lock_time_sec,
             vaults: deprecated_pool.vaults.clone(),
+            max_stakers: deprecated_pool.max_stakers,
         }
     }
 }
@@ -117,11 +156,13 @@ pub struct InitRewardPoolParams {
     pub liquidity_mint: Pubkey,
     /// staking lock time
     pub lock_time_sec: u64,
+    /// max stakers
+    pub max_stakers: u64,
 }
 
 impl Sealed for RewardPool {}
 impl Pack for RewardPool {
-    const LEN: usize = 1 + (32 + 1 + 32 + 8 + 8 + (4 + RewardVault::LEN * MAX_REWARDS));
+    const LEN: usize = 1 + (32 + 1 + 32 + 8 + 8 + 8 + 8 + (4 + RewardVault::LEN * MAX_REWARDS));
 
     fn pack_into_slice(&self, dst: &mut [u8]) {
         let mut slice = dst;
@@ -157,13 +198,15 @@ pub struct RewardVault {
     pub is_enabled: bool,
     /// Timestamp since when distribution begins
     pub enabled_at: u64,
+    /// Total rewards
+    pub claimed_total_amount: u64,
     /// Reward tiers
     pub reward_tiers: Vec<RewardTier>,
 }
 
 impl RewardVault {
     /// LEN
-    pub const LEN: usize = 1 + 32 + 4 + 1 + 8 + (4 + RewardTier::LEN * MAX_TIERS);
+    pub const LEN: usize = 1 + 32 + 4 + 1 + 8 + 8 + (4 + RewardTier::LEN * MAX_TIERS);
 }
 
 /// Reward vault

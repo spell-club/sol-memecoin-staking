@@ -74,6 +74,7 @@ impl Mining {
         let reward_index = self.reward_index_mut(reward_mint);
         let amount = reward_index.rewards;
         reward_index.rewards = 0;
+        reward_index.claimed_total_rewards += amount;
 
         amount
     }
@@ -177,9 +178,11 @@ pub struct RewardIndex {
     pub reward_mint: Pubkey,
     /// Rewards amount
     pub rewards: u64,
+    /// claimed_total_rewards
+    pub claimed_total_rewards: u64,
 }
 
 impl RewardIndex {
     ///
-    pub const LEN: usize = 32 + 8;
+    pub const LEN: usize = 32 + 8 + 8;
 }

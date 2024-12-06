@@ -15,6 +15,8 @@ pub enum RewardsInstruction {
     InitializePool {
         /// staking lock time
         lock_time_sec: u64,
+        /// max stakers
+        max_stakers: u64,
     },
 
     /// Creates a new vault account and adds it to the reward pool
@@ -78,6 +80,7 @@ pub fn initialize_pool(
     liquidity_mint: &Pubkey,
     payer: &Pubkey,
     lock_time_sec: u64,
+    max_stakers: u64,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*root_account, false),
@@ -93,7 +96,10 @@ pub fn initialize_pool(
 
     Instruction::new_with_borsh(
         *program_id,
-        &RewardsInstruction::InitializePool { lock_time_sec },
+        &RewardsInstruction::InitializePool {
+            lock_time_sec,
+            max_stakers,
+        },
         accounts,
     )
 }
@@ -295,7 +301,7 @@ pub fn claim(
     println!("user_reward_token: {}", user_reward_token);
 
     let accounts = vec![
-        AccountMeta::new_readonly(*reward_pool, false),
+        AccountMeta::new(*reward_pool, false),
         AccountMeta::new_readonly(*reward_mint, false),
         AccountMeta::new(*vault, false),
         AccountMeta::new(*mining, false),
