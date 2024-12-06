@@ -37,6 +37,9 @@ pub enum EverlendError {
 
     #[error("Lock time is still active")]
     LockTimeStillActive,
+
+    #[error("Pool is full")]
+    PoolIsFull,
 }
 
 impl PrintProgramError for EverlendError {

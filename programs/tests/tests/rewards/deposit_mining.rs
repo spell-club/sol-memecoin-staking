@@ -15,7 +15,7 @@ async fn success() {
     let liquidity_mint = Keypair::new();
 
     let (reward_pool, reward_pool_spl) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &liquidity_mint, 0)
+        .create_mint_and_initialize_pool(&mut context, &liquidity_mint, 0, 1)
         .await
         .unwrap();
 
@@ -82,13 +82,16 @@ async fn success() {
 
     assert_eq!(mining.amount, first_deposit_amount + second_deposit_amount);
 
-    let reward_pool_account = get_account(&mut context, &reward_pool).await;
-    let reward_pool = RewardPool::unpack(reward_pool_account.data.borrow()).unwrap();
+    let reward_pool_account =
+        RewardPool::unpack(get_account(&mut context, &reward_pool).await.data.borrow()).unwrap();
 
     assert_eq!(
-        reward_pool.total_amount,
+        reward_pool_account.total_amount,
         first_deposit_amount + second_deposit_amount
     );
+
+    assert_eq!(reward_pool_account.max_stakers, 1);
+    assert_eq!(reward_pool_account.total_stakers, 1);
 
     let token_balance = get_token_balance(&mut context, &token_holder.token_account).await;
     assert_eq!(
@@ -101,4 +104,30 @@ async fn success() {
         pool_token_balance,
         first_deposit_amount + second_deposit_amount
     );
+
+    let token_holder_2 = test_reward_pool
+        .create_token_holder(
+            &mut context,
+            &liquidity_mint.pubkey(),
+            10_000_000_000,
+            initial_balance,
+        )
+        .await;
+
+    assert_ne!(token_holder.owner, token_holder_2.owner);
+
+    test_reward_pool
+        .deposit_mining(
+            &mut context,
+            &liquidity_mint.pubkey(),
+            &token_holder_2.token_account,
+            &token_holder_2.owner,
+            first_deposit_amount,
+        )
+        .await
+        .unwrap_err();
+
+    let reward_pool_account =
+        RewardPool::unpack(get_account(&mut context, &reward_pool).await.data.borrow()).unwrap();
+    assert_eq!(reward_pool_account.total_stakers, 1);
 }

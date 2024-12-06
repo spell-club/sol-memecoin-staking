@@ -15,7 +15,7 @@ async fn success() {
     let liquidity_mint = Keypair::new();
 
     let (reward_pool, reward_pool_spl) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &liquidity_mint, 0)
+        .create_mint_and_initialize_pool(&mut context, &liquidity_mint, 0, 5)
         .await
         .unwrap();
 
@@ -78,6 +78,7 @@ async fn success() {
         RewardPool::unpack(get_account(&mut context, &reward_pool).await.data.borrow()).unwrap();
 
     assert_eq!(reward_pool_account.total_amount, 0);
+    assert_eq!(reward_pool_account.total_stakers, 0);
 
     let token_balance = get_token_balance(&mut context, &token_holder.token_account).await;
     assert_eq!(token_balance, initial_balance);

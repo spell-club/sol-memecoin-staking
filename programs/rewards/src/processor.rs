@@ -18,9 +18,16 @@ pub fn process_instruction(
     let instruction = RewardsInstruction::try_from_slice(input)?;
 
     match instruction {
-        RewardsInstruction::InitializePool { lock_time_sec } => {
+        RewardsInstruction::InitializePool {
+            lock_time_sec,
+            max_stakers,
+        } => {
             msg!("RewardsInstruction: InitializePool");
-            InitializePoolContext::new(program_id, accounts)?.process(program_id, lock_time_sec)
+            InitializePoolContext::new(program_id, accounts)?.process(
+                program_id,
+                lock_time_sec,
+                max_stakers,
+            )
         }
         RewardsInstruction::AddVault {
             reward_period_sec,

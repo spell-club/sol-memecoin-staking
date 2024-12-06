@@ -1,5 +1,5 @@
 use crate::state::{InitRewardPoolParams, RewardPool, RewardsRoot};
-use crate::{find_reward_pool_program_address, find_reward_pool_spl_program_address};
+use crate::{find_reward_pool_program_address, find_reward_pool_spl_token_account};
 use everlend_utils::{assert_account_key, find_program_address, AccountLoader};
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint_deprecated::ProgramResult;
@@ -53,23 +53,28 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey, lock_time_sec: u64) -> ProgramResult {
+    pub fn process(
+        &self,
+        program_id: &Pubkey,
+        lock_time_sec: u64,
+        max_stakers: u64,
+    ) -> ProgramResult {
         {
             let rewards_root = RewardsRoot::unpack(&self.rewards_root.data.borrow())?;
             assert_account_key(self.payer, &rewards_root.authority)?;
         }
 
         self.create_spl_acc(program_id)?;
-        self.create_rewards_pool_acc(program_id, lock_time_sec)?;
+        self.create_rewards_pool_acc(program_id, lock_time_sec, max_stakers)?;
 
         Ok(())
     }
 
-    /// create pool account
+    /// create pool token account
     pub fn create_spl_acc(&self, program_id: &Pubkey) -> ProgramResult {
         {
             let bump = {
-                let (spl_pubkey, bump) = find_reward_pool_spl_program_address(
+                let (spl_pubkey, bump) = find_reward_pool_spl_token_account(
                     program_id,
                     self.reward_pool.key,
                     self.liquidity_mint.key,
@@ -113,6 +118,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
         &self,
         program_id: &Pubkey,
         lock_time_sec: u64,
+        max_stakers: u64,
     ) -> ProgramResult {
         let bump = {
             let (reward_pool_pubkey, bump) = find_reward_pool_program_address(
@@ -144,6 +150,7 @@ impl<'a, 'b> InitializePoolContext<'a, 'b> {
             bump,
             lock_time_sec,
             liquidity_mint: *self.liquidity_mint.key,
+            max_stakers,
         });
 
         RewardPool::pack(reward_pool, *self.reward_pool.data.borrow_mut())?;
