@@ -67,7 +67,15 @@ pub enum RewardsInstruction {
     InitializeRoot,
 
     /// Migrates reward pool
-    MigratePool,
+    MigratePool {
+        /// max stakers
+        max_stakers: u64,
+        /// total stakers
+        total_stakers: u64,
+    },
+
+    /// Migrates mining
+    MigrateMining,
 }
 
 /// Creates 'InitializePool' instruction.
@@ -338,6 +346,8 @@ pub fn migrate_pool(
     reward_pool: &Pubkey,
     payer: &Pubkey,
     liquidity_mint: &Pubkey,
+    max_stakers: u64,
+    total_stakers: u64,
 ) -> Instruction {
     let accounts = vec![
         AccountMeta::new_readonly(*root_account, false),
@@ -348,5 +358,27 @@ pub fn migrate_pool(
         AccountMeta::new_readonly(sysvar::rent::id(), false),
     ];
 
-    Instruction::new_with_borsh(*program_id, &RewardsInstruction::MigratePool, accounts)
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::MigratePool{ max_stakers, total_stakers }, accounts)
+}
+
+/// Creates 'MigrateMining' instruction.
+pub fn migrate_mining(
+    program_id: &Pubkey,
+    mining: &Pubkey,
+    root_account: &Pubkey,
+    reward_pool: &Pubkey,
+    payer: &Pubkey,
+    liquidity_mint: &Pubkey,
+) -> Instruction {
+    let accounts = vec![
+        AccountMeta::new(*mining, false),
+        AccountMeta::new_readonly(*root_account, false),
+        AccountMeta::new_readonly(*reward_pool, false),
+        AccountMeta::new_readonly(*liquidity_mint, false),
+        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(system_program::id(), false),
+        AccountMeta::new_readonly(sysvar::rent::id(), false),
+    ];
+
+    Instruction::new_with_borsh(*program_id, &RewardsInstruction::MigrateMining, accounts)
 }
