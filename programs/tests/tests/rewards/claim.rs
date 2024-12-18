@@ -20,7 +20,7 @@ async fn success() {
     let pool_mint = Keypair::new();
 
     let (reward_pool_pubkey, _) = test_reward_pool
-        .create_mint_and_initialize_pool(&mut context, &pool_mint, 0)
+        .create_mint_and_initialize_pool(&mut context, &pool_mint, 0, 5)
         .await
         .unwrap();
 
@@ -140,9 +140,19 @@ async fn success() {
     .unwrap();
 
     assert_eq!(mining.indexes[0].rewards, 0);
+    assert_eq!(mining.indexes[0].claimed_total_rewards, exp_reward_amount);
 
     let vault_acc = Account::unpack(get_account(&mut context, &vault).await.data.borrow()).unwrap();
     assert_eq!(vault_acc.amount, reward_amount - exp_reward_amount);
+
+    let vault_acc = RewardPool::unpack(
+        get_account(&mut context, &reward_pool_pubkey)
+            .await
+            .data
+            .borrow(),
+    )
+    .unwrap();
+    assert_eq!(vault_acc.vaults[0].claimed_total_amount, exp_reward_amount);
 
     println!("vault: {:?}", vault_acc);
 }
@@ -186,7 +196,7 @@ fn check_mining_maths(
         .as_secs();
 
     let vault = RewardVault {
-        bump: 0,
+        vault_token_account_bump: 0,
         reward_mint: Keypair::new().pubkey(),
 
         reward_period_sec: period,
@@ -197,6 +207,7 @@ fn check_mining_maths(
         }],
         is_enabled: true,
         enabled_at: current_timestamp,
+        claimed_total_amount: 0,
     };
 
     let mut mining = Mining::initialize(reward_pool.pubkey(), 0, owner.pubkey());

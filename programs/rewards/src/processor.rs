@@ -3,11 +3,11 @@
 use crate::instruction::RewardsInstruction;
 use crate::instructions::*;
 use borsh::BorshDeserialize;
-use everlend_utils::EverlendError;
 use solana_program::account_info::AccountInfo;
 use solana_program::entrypoint::ProgramResult;
 use solana_program::msg;
 use solana_program::pubkey::Pubkey;
+use everlend_utils::EverlendError;
 
 ///
 pub fn process_instruction(
@@ -18,9 +18,16 @@ pub fn process_instruction(
     let instruction = RewardsInstruction::try_from_slice(input)?;
 
     match instruction {
-        RewardsInstruction::InitializePool { lock_time_sec } => {
+        RewardsInstruction::InitializePool {
+            lock_time_sec,
+            max_stakers,
+        } => {
             msg!("RewardsInstruction: InitializePool");
-            InitializePoolContext::new(program_id, accounts)?.process(program_id, lock_time_sec)
+            InitializePoolContext::new(program_id, accounts)?.process(
+                program_id,
+                lock_time_sec,
+                max_stakers,
+            )
         }
         RewardsInstruction::AddVault {
             reward_period_sec,
@@ -73,10 +80,15 @@ pub fn process_instruction(
             msg!("RewardsInstruction: InitializeRoot");
             InitializeRootContext::new(program_id, accounts)?.process(program_id)
         }
-        RewardsInstruction::MigratePool => {
+        RewardsInstruction::MigratePool { max_stakers, total_stakers } => {
             msg!("RewardsInstruction: MigratePool");
             Err(EverlendError::NotImplemented.into())
-            // MigratePoolContext::new(program_id, accounts)?.process(program_id)
+            // MigratePoolContext::new(program_id, accounts)?.process(program_id, max_stakers, total_stakers)
+        }
+        RewardsInstruction::MigrateMining => {
+            msg!("RewardsInstruction: MigrateMining");
+            Err(EverlendError::NotImplemented.into())
+            // MigrateMiningContext::new(program_id, accounts)?.process(program_id)
         }
     }
 }

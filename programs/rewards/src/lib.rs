@@ -32,7 +32,7 @@ pub fn find_mining_program_address(
 }
 
 /// Generates vault address
-pub fn find_vault_program_address(
+pub fn find_vault_spl_token_account(
     program_id: &Pubkey,
     reward_pool: &Pubkey,
     reward_mint: &Pubkey,
@@ -64,7 +64,7 @@ pub fn find_reward_pool_program_address(
 }
 
 /// Generates reward pool address
-pub fn find_reward_pool_spl_program_address(
+pub fn find_reward_pool_spl_token_account(
     program_id: &Pubkey,
     pool_account: &Pubkey,
     liquidity_mint: &Pubkey,

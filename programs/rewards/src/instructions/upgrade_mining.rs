@@ -75,6 +75,10 @@ impl<'a, 'b> UpgradeMiningContext<'a, 'b> {
             return Err(ProgramError::InvalidArgument);
         }
 
+        if tier == mining.reward_tier {
+            return Err(ProgramError::InvalidArgument);
+        }
+
         mining.refresh_rewards(reward_pool.vaults.iter(), timestamp as u64)?;
         mining.reward_tier = tier;
 
