@@ -6,6 +6,7 @@ use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::program_pack::{IsInitialized, Pack, Sealed};
 use solana_program::pubkey::Pubkey;
+use crate::state::deprecated_reward_pool::DeprecatedRewardPool;
 
 /// Max reward vaults
 pub const MAX_REWARDS: usize = 3;
@@ -131,17 +132,25 @@ impl RewardPool {
     }
 
     /// Process migrate
-    pub fn migrate(deprecated_pool: &RewardPool) -> RewardPool {
+    pub fn migrate(deprecated_pool: &DeprecatedRewardPool, max_stakers: u64, total_stakers: u64) -> RewardPool {
         Self {
-            account_type: AccountType::RewardPool,
+            account_type: deprecated_pool.account_type.clone(),
             rewards_root: deprecated_pool.rewards_root,
             bump: deprecated_pool.bump,
-            total_stakers: deprecated_pool.total_stakers,
             liquidity_mint: deprecated_pool.liquidity_mint,
+            max_stakers,
+            total_stakers,
             total_amount: deprecated_pool.total_amount,
             lock_time_sec: deprecated_pool.lock_time_sec,
-            vaults: deprecated_pool.vaults.clone(),
-            max_stakers: deprecated_pool.max_stakers,
+            vaults: deprecated_pool.vaults.iter().map(|v| RewardVault{
+                vault_token_account_bump: v.vault_token_account_bump,
+                reward_mint: v.reward_mint,
+                reward_period_sec: v.reward_period_sec,
+                is_enabled: v.is_enabled,
+                enabled_at: v.enabled_at,
+                claimed_total_amount: 0,
+                reward_tiers: v.reward_tiers.clone(),
+            }).collect(),
         }
     }
 }

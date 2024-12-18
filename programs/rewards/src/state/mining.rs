@@ -9,7 +9,7 @@ use solana_program::pubkey::Pubkey;
 use std::cmp;
 use std::ops::Div;
 use std::slice::Iter;
-
+use crate::state::deprecated_mining::DeprecatedMining;
 use super::AccountType;
 
 /// Mining
@@ -48,6 +48,25 @@ impl Mining {
             owner,
             reward_tier: 0,
             indexes: vec![],
+        }
+    }
+
+    /// Process migrate
+    pub fn migrate(deprecated_mining: &DeprecatedMining) -> Mining {
+        Self {
+            account_type: deprecated_mining.account_type.clone(),
+            reward_pool: deprecated_mining.reward_pool,
+            bump: deprecated_mining.bump,
+            amount: deprecated_mining.amount,
+            rewards_calculated_at: deprecated_mining.rewards_calculated_at,
+            owner: deprecated_mining.owner,
+            last_deposit_time: deprecated_mining.last_deposit_time,
+            reward_tier: deprecated_mining.reward_tier,
+            indexes: deprecated_mining.indexes.iter().map(|i| RewardIndex{
+                reward_mint: i.reward_mint,
+                rewards: i.rewards,
+                claimed_total_rewards: 0,
+            }).collect(),
         }
     }
 

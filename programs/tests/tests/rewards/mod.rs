@@ -5,6 +5,8 @@ pub mod fill_vault;
 pub mod initialize_pool;
 pub mod upgrade_mining;
 pub mod withdraw_mining;
+pub mod migrate_pool;
+pub mod migrate_mining;
 
 use crate::utils::{
     add_token_holder, create_mint, get_account, get_token_balance, transfer_sol, BanksClientResult,
@@ -361,5 +363,65 @@ impl TestRewards {
         );
 
         token_holder
+    }
+
+    pub async fn migrate_pool(
+        &self,
+        context: &mut ProgramTestContext,
+        liquidity_mint: &Keypair,
+        max_stakers: u64,
+        total_stakers: u64,
+    ) -> BanksClientResult<()> {
+        let (reward_pool, _) = self.get_pool_addresses(&liquidity_mint.pubkey());
+
+        let tx = Transaction::new_signed_with_payer(
+            &[
+                everlend_rewards::instruction::migrate_pool(
+                    &everlend_rewards::id(),
+                    &self.rewards_root.pubkey(),
+                    &reward_pool,
+                    &self.root_authority.pubkey(),
+                    &liquidity_mint.pubkey(),
+                    max_stakers,
+                    total_stakers,
+                ),
+            ],
+            Some(&self.root_authority.pubkey()),
+            &[&self.root_authority],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await?;
+
+        Ok(())
+    }
+
+    pub async fn migrate_mining(
+        &self,
+        context: &mut ProgramTestContext,
+        liquidity_mint: &Keypair,
+        mining: &Pubkey
+    ) -> BanksClientResult<()> {
+        let (reward_pool, _) = self.get_pool_addresses(&liquidity_mint.pubkey());
+
+        let tx = Transaction::new_signed_with_payer(
+            &[
+                everlend_rewards::instruction::migrate_mining(
+                    &everlend_rewards::id(),
+                    mining,
+                    &self.rewards_root.pubkey(),
+                    &reward_pool,
+                    &self.root_authority.pubkey(),
+                    &liquidity_mint.pubkey(),
+                ),
+            ],
+            Some(&self.root_authority.pubkey()),
+            &[&self.root_authority],
+            context.last_blockhash,
+        );
+
+        context.banks_client.process_transaction(tx).await?;
+
+        Ok(())
     }
 }

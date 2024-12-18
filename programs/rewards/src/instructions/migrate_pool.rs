@@ -10,7 +10,7 @@ use solana_program::system_program;
 use solana_program::sysvar::{Sysvar, SysvarId};
 
 use crate::find_reward_pool_program_address;
-use crate::state::{RewardPool, RewardsRoot};
+use crate::state::{RewardPool, DeprecatedRewardPool, RewardsRoot};
 
 /// Instruction context
 pub struct MigratePoolContext<'a, 'b> {
@@ -47,11 +47,11 @@ impl<'a, 'b> MigratePoolContext<'a, 'b> {
     }
 
     /// Process instruction
-    pub fn process(&self, program_id: &Pubkey) -> ProgramResult {
+    pub fn process(&self, program_id: &Pubkey, max_stakers: u64, total_stakers: u64) -> ProgramResult {
         let rent = Rent::from_account_info(self.rent)?;
 
-        let deprecated_pool = RewardPool::unpack(&self.reward_pool.data.borrow())?;
-        let reward_pool = RewardPool::migrate(&deprecated_pool);
+        let deprecated_pool = DeprecatedRewardPool::unpack(&self.reward_pool.data.borrow())?;
+        let reward_pool = RewardPool::migrate(&deprecated_pool, max_stakers, total_stakers);
 
         let (reward_pool_pubkey, _) = find_reward_pool_program_address(
             program_id,
