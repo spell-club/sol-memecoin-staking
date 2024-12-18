@@ -106,7 +106,7 @@ impl<'a, 'b> ClaimContext<'a, 'b> {
         }
 
         mining.refresh_rewards(reward_pool.vaults.iter(), timestamp as u64)?;
-        let reward_amount = mining.flush_rewards(*self.reward_mint.key);
+        let reward_amount = mining.flush_rewards(*self.reward_mint.key)?;
         reward_pool.update_vault_totals(*self.reward_mint.key, reward_amount)?;
 
         self.spl_transfer_reward(reward_amount, reward_pool_seeds)?;

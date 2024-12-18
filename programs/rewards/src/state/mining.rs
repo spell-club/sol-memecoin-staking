@@ -1,3 +1,5 @@
+use super::AccountType;
+use crate::state::deprecated_mining::DeprecatedMining;
 use crate::state::{RewardVault, MAX_REWARDS};
 use borsh::{BorshDeserialize, BorshSchema, BorshSerialize};
 use everlend_utils::EverlendError;
@@ -9,8 +11,6 @@ use solana_program::pubkey::Pubkey;
 use std::cmp;
 use std::ops::Div;
 use std::slice::Iter;
-use crate::state::deprecated_mining::DeprecatedMining;
-use super::AccountType;
 
 /// Mining
 #[derive(Debug, BorshDeserialize, BorshSerialize, BorshSchema)]
@@ -62,11 +62,15 @@ impl Mining {
             owner: deprecated_mining.owner,
             last_deposit_time: deprecated_mining.last_deposit_time,
             reward_tier: deprecated_mining.reward_tier,
-            indexes: deprecated_mining.indexes.iter().map(|i| RewardIndex{
-                reward_mint: i.reward_mint,
-                rewards: i.rewards,
-                claimed_total_rewards: 0,
-            }).collect(),
+            indexes: deprecated_mining
+                .indexes
+                .iter()
+                .map(|i| RewardIndex {
+                    reward_mint: i.reward_mint,
+                    rewards: i.rewards,
+                    claimed_total_rewards: 0,
+                })
+                .collect(),
         }
     }
 
@@ -89,13 +93,16 @@ impl Mining {
     }
 
     /// Flush rewards
-    pub fn flush_rewards(&mut self, reward_mint: Pubkey) -> u64 {
+    pub fn flush_rewards(&mut self, reward_mint: Pubkey) -> Result<u64, ProgramError> {
         let reward_index = self.reward_index_mut(reward_mint);
         let amount = reward_index.rewards;
         reward_index.rewards = 0;
-        reward_index.claimed_total_rewards += amount;
+        reward_index.claimed_total_rewards = reward_index
+            .claimed_total_rewards
+            .checked_add(amount)
+            .ok_or(EverlendError::MathOverflow)?;
 
-        amount
+        Ok(amount)
     }
 
     /// Refresh rewards

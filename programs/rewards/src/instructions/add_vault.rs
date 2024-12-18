@@ -82,10 +82,11 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
         };
 
         let timestamp = Clock::from_account_info(self.clock)?.unix_timestamp;
-        let bump = self.create_spl_acc(vault_bump)?;
+
+        self.create_spl_acc(vault_bump)?;
 
         reward_pool.add_vault(RewardVault {
-            vault_token_account_bump: bump,
+            vault_token_account_bump: vault_bump,
             reward_period_sec,
             reward_mint: *self.reward_mint.key,
             is_enabled,
@@ -100,7 +101,7 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
     }
 
     /// creates vault spl token account
-    pub fn create_spl_acc(&self, bump: u8) -> Result<u8, ProgramError> {
+    pub fn create_spl_acc(&self, bump: u8) -> ProgramResult {
         let signers_seeds = &[
             b"vault".as_ref(),
             self.reward_pool.key.as_ref(),
@@ -123,6 +124,6 @@ impl<'a, 'b> AddVaultContext<'a, 'b> {
             self.rent.clone(),
         )?;
 
-        Ok(bump)
+        Ok(())
     }
 }
